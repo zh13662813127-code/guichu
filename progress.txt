@@ -1,0 +1,48 @@
+# 归处 Guichu — 进度跟踪
+
+> 每次 AI 会话开始时首先读取此文件。
+> 每次完成功能后更新此文件。
+
+## 当前状态
+
+**阶段**：文档编写
+**最后更新**：2026-04-11
+
+## 已完成
+
+- [x] PRD.md — 产品需求文档
+- [x] APP_FLOW.md — 用户流程
+- [x] TECH_STACK.md — 技术栈（版本锁定）
+- [x] FRONTEND_GUIDELINES.md — 设计系统
+- [x] BACKEND_STRUCTURE.md — 数据结构
+- [x] IMPLEMENTATION_PLAN.md — 构建步骤
+- [x] CLAUDE.md — AI 会话规则
+- [x] progress.txt — 本文件
+- [x] README.md — 开源项目说明
+- [x] LICENSE — MIT
+
+## 进行中
+
+- [ ] 用户审阅文档
+- [ ] 推送到 GitHub
+
+## 接下来（按 IMPLEMENTATION_PLAN.md 执行）
+
+- [ ] 阶段 0：项目初始化（Expo + 依赖 + 目录）
+- [ ] 阶段 1：F1 记录坟墓位置
+- [ ] 阶段 2：F2 导航回坟墓
+- [ ] 阶段 3：F3 蒸馏长辈 .skill
+- [ ] 阶段 4：F4 与长辈对话
+- [ ] 阶段 5：F5 声音克隆
+- [ ] 阶段 6：F6 族谱树
+- [ ] 阶段 7：收尾打磨
+
+## 已知问题
+
+（暂无）
+
+## 笔记
+
+- 全项目无服务端，数据全在用户手机本地
+- LLM/TTS 全部 BYOK（用户自带 key）
+- 默认推荐 DeepSeek（中文自然、便宜）
