@@ -14,12 +14,21 @@
 │   ├── /photos/                 ← 现场照片 .jpg
 │   ├── /skills/                 ← 导出的 .skill 文件 .md
 │   └── /voices/                 ← 声音样本/声纹档案
+├── 习俗知识库（App 内置，随安装包分发）
+│   └── /customs/                ← JSON 格式习俗数据
+│       ├── common.json          ← 全国通用习俗
+│       └── regions/             ← 按省市分目录
+│           ├── 山东省_潍坊市.json
+│           ├── 四川省_成都市.json
+│           └── ...
 ├── 加密存储（expo-secure-store）
 │   ├── llm_api_key              ← LLM API key
 │   ├── tts_api_key              ← TTS API key
 │   └── minimax_group_id         ← MiniMax group id
 └── 键值存储（react-native-mmkv）
     ├── settings.*               ← 偏好设置
+    ├── settings.region          ← 用户所在地区（如 "山东省/潍坊市"）
+    ├── settings.notifications   ← 是否开启习俗提醒通知
     └── onboarding_done          ← 是否完成首次引导
 ```
 
@@ -36,7 +45,9 @@ CREATE TABLE ancestors (
   relationship      TEXT,                     -- 与用户的关系（爷爷/奶奶/外公/外婆/父/母/…）
   gender            TEXT CHECK(gender IN ('male','female','other')),
   birth_year        INTEGER,                  -- 出生年（可空，可能不记得）
+  birth_date        TEXT,                     -- 精确出生日期 yyyy-MM-dd（可空）
   death_year        INTEGER,                  -- 去世年（可空，健在则 NULL）
+  death_date        TEXT,                     -- 精确去世日期 yyyy-MM-dd（可空，F7 习俗计算依赖此字段）
   avatar_path       TEXT,                     -- 头像照片路径（相对于 /photos/）
   skill_content     TEXT,                     -- .skill 文件 Markdown 全文
   voice_id          TEXT,                     -- 第三方 TTS 服务返回的声音 ID
@@ -163,7 +174,33 @@ CREATE INDEX idx_msg_conv ON messages(conversation_id);
 CREATE INDEX idx_msg_created ON messages(created_at);
 ```
 
-### 2.7 `schema_version`（迁移控制表）
+### 2.7 `ritual_reminders`（习俗提醒表 — 缓存计算结果）
+
+App 启动时根据 `ancestors.death_date` + 习俗知识库自动计算所有即将到来的重要日子，
+缓存到此表，避免每次重复计算。当 `death_date` 或地区设置变更时重新生成。
+
+```sql
+CREATE TABLE ritual_reminders (
+  id                TEXT PRIMARY KEY,
+  ancestor_id       TEXT NOT NULL REFERENCES ancestors(id) ON DELETE CASCADE,
+  ritual_key        TEXT NOT NULL,             -- 习俗标识（如 'first_seven', 'qingming_2026', 'anniversary_3'）
+  ritual_name       TEXT NOT NULL,             -- 显示名（如 '头七', '清明节', '三周年祭'）
+  date_solar        TEXT NOT NULL,             -- 公历日期 yyyy-MM-dd
+  date_lunar        TEXT,                      -- 农历日期（如 '三月初五'）
+  year_after_death  INTEGER,                   -- 去世后第几年（0=当年）
+  todo_items        TEXT,                      -- JSON 数组：该做什么 ["扫墓","烧纸","上香"]
+  bring_items       TEXT,                      -- JSON 数组：要带什么 ["纸钱","香烛","供果","饺子"]
+  home_notes        TEXT,                      -- 家中注意事项（如"不贴红对联"）
+  description       TEXT,                      -- 习俗说明
+  is_notified       INTEGER DEFAULT 0,         -- 是否已发送本地通知（0/1）
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_ritual_ancestor ON ritual_reminders(ancestor_id);
+CREATE INDEX idx_ritual_date ON ritual_reminders(date_solar);
+```
+
+### 2.8 `schema_version`（迁移控制表）
 
 ```sql
 CREATE TABLE schema_version (

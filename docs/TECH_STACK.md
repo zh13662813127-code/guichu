@@ -31,6 +31,8 @@
 | `expo-document-picker` | `11.10.1` | 导入 .skill 文件 |
 | `expo-secure-store` | `12.8.1` | 存储用户 API key（加密） |
 | `expo-haptics` | `12.8.1` | 按钮触觉反馈 |
+| `expo-notifications` | `0.27.7` | 本地通知（习俗提醒，不需要推送服务） |
+| `expo-speech` | `11.7.0` | 系统 TTS（零配置语音播放） |
 | `react-native-maps` | `1.10.0` | （仅用于展示墓地静态地图点位，不做导航） |
 | `zustand` | `4.5.2` | 轻量状态管理 |
 | `react-native-mmkv` | `2.12.2` | 键值存储（偏好设置） |
@@ -123,6 +125,12 @@ guichu/
 │   │       └── elevenlabs.ts
 │   ├── features/                 # 按功能划分的业务模块
 │   │   ├── grave-pin/
+│   │   ├── rituals/              # 习俗指南
+│   │   │   ├── customs/          # 习俗知识库 JSON
+│   │   │   │   ├── common.json
+│   │   │   │   └── regions/
+│   │   │   ├── calcRituals.ts
+│   │   │   └── templates.ts
 │   │   ├── distill-skill/
 │   │   ├── chat/
 │   │   └── voice-clone/

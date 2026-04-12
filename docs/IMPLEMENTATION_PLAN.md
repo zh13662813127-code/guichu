@@ -140,48 +140,118 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 3：F3 — 蒸馏长辈 .skill
+## 阶段 3：F7 — 习俗指南
 
-### 3.1 设置页：LLM 配置
+> 排在 .skill 之前是因为这个功能与 F1/F2 天然配合（记位置 → 看习俗带齐东西 → 导航去扫墓），
+> 且不依赖 LLM，纯本地即可运行。
+
+### 3.1 习俗知识库
+- `src/features/rituals/customs/common.json` — 全国通用习俗数据
+- `src/features/rituals/customs/regions/` — 按省市分 JSON 文件
+- 先做 5 个代表性地区作为种子数据：
+  - 山东省·潍坊市、四川省·成都市、广东省·广州市、浙江省·杭州市、河南省·郑州市
+- 通用习俗覆盖：头七、三七、五七、七七、百日、周年、三周年、清明、中元、寒衣、除夕
+
+### 3.2 农历计算工具
+- `src/utils/lunar-calendar.ts`
+- 公历 ↔ 农历互转（用 `date-fns` + 内置农历表）
+- 清明节日期计算（春分后 15 天）
+- 中元节（农历七月十五）、寒衣节（农历十月初一）
+
+### 3.3 习俗日历计算引擎
+- `src/features/rituals/calcRituals.ts`
+- 输入：`death_date` + `region` + 当前日期
+- 输出：未来所有重要日子列表
+- 写入 `ritual_reminders` 表（缓存）
+- 当 death_date 或 region 变更时重新计算
+
+### 3.4 设置页：地区选择
+- `app/settings/region.tsx`
+- 省 → 市两级联动
+- 保存到 MMKV `settings.region`
+- 首次添加有 death_date 的长辈时自动弹出
+
+### 3.5 主页习俗提醒卡片
+- 在 Home 大按钮下方显示未来 30 天内的习俗提醒
+- 按时间排序，最多显示 3 条
+- 点击跳转到习俗详情
+
+### 3.6 长辈详情页习俗卡片
+- 在长辈详情页新增「📅 习俗日历」卡片
+- 显示下一个即将到来的日子 + 倒计时
+
+### 3.7 习俗日历时间线页
+- `app/ancestors/[id]/rituals.tsx`
+- 分三段：已过（灰色）/ 即将到来（高亮）/ 未来
+- 点击跳转详情
+
+### 3.8 习俗详情页
+- `app/ancestors/[id]/rituals/[key].tsx`
+- 习俗说明 + 要做什么 + 要带什么（可勾选清单）+ 家中注意事项
+- 底部「🧭 导航去扫墓」按钮
+- 地方特色用 🏷️ 标签区分
+
+### 3.9 本地通知
+- `expo-notifications`（本地推送，不需要服务端）
+- 设置里可选提前 7天/3天/1天 提醒
+- 可选提醒时间（默认上午 9:00）
+
+### 3.10 验证
+```
+✅ 选择山东潍坊 → 添加长辈去世日期 → 自动生成习俗日历
+✅ 主页显示近期提醒卡片
+✅ 习俗详情：清明节显示"饺子/单饼"（潍坊特色）
+✅ 带什么清单可勾选
+✅ 春节对联颜色建议正确（第 1 年白/蓝，第 2 年绿，第 3 年红）
+✅ 切换地区 → 习俗内容刷新
+✅ 未覆盖地区 → 显示通用习俗 + 贡献提示
+✅ 本地通知提前 7 天推送
+```
+
+---
+
+## 阶段 4：F3 — 蒸馏长辈 .skill
+
+### 4.1 设置页：LLM 配置
 - `app/settings/llm.tsx`
 - Provider 下拉、baseURL、apiKey（密码模式）、model
 - 「测试连接」按钮
 - 存储到 `expo-secure-store`
 
-### 3.2 LLM 适配器
+### 4.2 LLM 适配器
 - `src/adapters/llm/base.ts` — 接口定义
 - `src/adapters/llm/openai-compat.ts` — 用 `openai` SDK 实现
 - 流式输出 + abort 支持 + 错误处理
 
-### 3.3 访谈模板
+### 4.3 访谈模板
 - `src/features/distill-skill/templates.ts`
 - 5 大主题 × 4 个默认问题 = 20 问
 - 支持用户增删问题
 
-### 3.4 访谈页
+### 4.4 访谈页
 - `app/ancestors/[id]/interview.tsx`
 - 按 `APP_FLOW.md` 第 4 节实现
 - 逐题展示 + 长按录音 + 自动计时
 - 进度条 `3/20`
 - 录音存入 SQLite `interview_answers`
 
-### 3.5 .skill 生成
+### 4.5 .skill 生成
 - `src/features/distill-skill/generateSkill.ts`
 - 拼接所有转写文本 → 调用 LLM
 - prompt 模板：要求输出符合 `BACKEND_STRUCTURE.md` 第 7 节的格式
 - 返回 Markdown 存入 `ancestors.skill_content`
 
-### 3.6 .skill 预览 + 编辑 + 导出
+### 4.6 .skill 预览 + 编辑 + 导出
 - 渲染 Markdown
 - 简单文本编辑器
 - `expo-sharing` 导出
 
-### 3.7 .skill 导入
+### 4.7 .skill 导入
 - `expo-document-picker` 选择 .md 文件
 - 解析 frontmatter
 - 存入对应长辈
 
-### 3.8 验证
+### 4.8 验证
 ```
 ✅ 配置 DeepSeek key → 测试连接 → 成功
 ✅ 访谈 20 题 → 录音 → 保存
@@ -192,28 +262,28 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 4：F4 — 与长辈对话
+## 阶段 5：F4 — 与长辈对话
 
-### 4.1 对话页
+### 5.1 对话页
 - `app/ancestors/[id]/chat.tsx`
 - ChatBubble 组件（FRONTEND_GUIDELINES 7.4）
 - 底部输入框 + 发送按钮
 
-### 4.2 对话逻辑
+### 5.2 对话逻辑
 - `src/features/chat/useChat.ts`
 - 组装 messages：system(.skill + 安全护栏) + 历史 + 用户输入
 - 调用 LLM 适配器流式输出
 - 逐 token 渲染气泡
 
-### 4.3 伦理弹窗
+### 5.3 伦理弹窗
 - 首次进入对话页弹窗（APP_FLOW 第 5 节）
 - 标记 MMKV `ethics_dismissed_{ancestor_id}`
 
-### 4.4 对话历史
+### 5.4 对话历史
 - 写入 `conversations` + `messages` 表
 - 支持清空、导出 Markdown
 
-### 4.5 验证
+### 5.5 验证
 ```
 ✅ 首次弹伦理提示
 ✅ 发消息 → 流式回复 → 风格匹配 .skill
@@ -223,28 +293,28 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 5：F5 — 声音克隆（可选）
+## 阶段 6：F5 — 声音克隆（可选）
 
-### 5.1 设置页：TTS 配置
+### 6.1 设置页：TTS 配置
 - `app/settings/tts.tsx`
 - 引擎单选 + apiKey
 
-### 5.2 TTS 适配器
+### 6.2 TTS 适配器
 - `src/adapters/tts/base.ts` — 接口
 - `src/adapters/tts/system.ts` — expo-speech 实现
 - `src/adapters/tts/minimax.ts` — MiniMax API
 - `src/adapters/tts/elevenlabs.ts` — ElevenLabs API
 
-### 5.3 声音训练页
+### 6.3 声音训练页
 - 收集样本录音（复用访谈录音 + 新增录制）
 - 伦理确认弹窗
 - 调用 `cloneVoice()` → 保存 `voice_id`
 
-### 5.4 对话页集成语音
+### 6.4 对话页集成语音
 - 开关：「用 xx 的声音念」
 - 每条回复调用 `speak()` 播放
 
-### 5.5 验证
+### 6.5 验证
 ```
 ✅ system TTS 零配置即可念出回复
 ✅ 配置 MiniMax → 克隆 → 用克隆声音播放
@@ -252,19 +322,19 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 6：F6 — 族谱树
+## 阶段 7：F6 — 族谱树
 
-### 6.1 树渲染
+### 7.1 树渲染
 - `app/tree.tsx`
 - 用 `react-native-svg` 画节点 + 连线
 - 从 `ancestors` 表读数据，按 `generation` + `parent_id` 构建树
 
-### 6.2 交互
+### 7.2 交互
 - 点击节点跳转详情页
 - 长按弹菜单（添加关系/编辑/删除）
 - 双指缩放
 
-### 6.3 验证
+### 7.3 验证
 ```
 ✅ 3 代 5 人渲染正确
 ✅ 点击跳转
@@ -273,27 +343,27 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 7：收尾
+## 阶段 8：收尾
 
-### 7.1 首次启动引导
+### 8.1 首次启动引导
 - 欢迎页 → 权限请求 → 进入 Home
 
-### 7.2 数据导入导出
+### 8.2 数据导入导出
 - 导出 zip（BACKEND_STRUCTURE 第 9 节）
 - 导入 zip + 合并/覆盖选择
 
-### 7.3 关于页
+### 8.3 关于页
 - 版本号、GitHub 链接、MIT、隐私声明
 
-### 7.4 测试
+### 8.4 测试
 - 每个 feature 模块 ≥3 个单元测试
 - 核心路径 E2E（可选 Detox）
 
-### 7.5 文档完善
+### 8.5 文档完善
 - 更新 README.md 安装/使用说明
 - 截图 + GIF 演示
 
-### 7.6 最终验证
+### 8.6 最终验证
 ```
 ✅ clone 仓库 → npm install → expo start → 15 分钟跑起来
 ✅ 全流程走一遍无报错
