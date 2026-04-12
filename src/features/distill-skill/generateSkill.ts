@@ -1,9 +1,9 @@
 /**
  * .skill 文件生成器
  * 拼接 prompt，调用 LLM 流式生成 .skill 格式的 Markdown
+ *
+ * 注意：openai SDK 使用动态导入，避免 App 启动时加载导致 RN 兼容性错误
  */
-
-import OpenAI from 'openai';
 
 /** 系统 prompt：指导 LLM 生成 .skill 格式文件 */
 const SYSTEM_PROMPT = `你正在为用户整理一位长辈的"数字人格档案"。
@@ -64,14 +64,8 @@ function buildUserMessage(params: {
 /**
  * 调用 LLM 流式生成 .skill 文件
  *
- * @param params.name 长辈名字
- * @param params.relationship 与用户的关系
- * @param params.birthYear 出生年份
- * @param params.deathYear 去世年份
- * @param params.answers 所有问答记录
- * @param params.llmConfig LLM 配置（baseURL、apiKey、model）
- * @param params.onProgress 流式回调，每次返回新增的文本片段
- * @returns 完整的 .skill Markdown 文本
+ * openai SDK 在此处动态导入，仅在用户实际触发蒸馏时才加载，
+ * 避免 App 启动时 Metro bundler 解析 openai 的 Node.js 类继承语法报错。
  */
 export async function generateSkillFile(params: {
   name: string;
@@ -84,10 +78,12 @@ export async function generateSkillFile(params: {
 }): Promise<string> {
   const { llmConfig, onProgress, ...rest } = params;
 
+  // 动态导入 openai SDK，避免启动时加载
+  const { default: OpenAI } = await import('openai');
+
   const client = new OpenAI({
     baseURL: llmConfig.baseURL,
     apiKey: llmConfig.apiKey,
-    // React Native 环境需要禁用默认 headers
     dangerouslyAllowBrowser: true,
   });
 

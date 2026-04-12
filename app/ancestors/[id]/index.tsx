@@ -213,16 +213,16 @@ export default function AncestorDetailScreen() {
                   <Pressable
                     style={styles.skillActionButton}
                     onPress={() => {
-                      Alert.alert('功能开发中', '编辑 .skill 功能即将上线');
+                      router.push(`/ancestors/${id}/skill-preview` as any);
                     }}
                   >
                     <Edit3 color={Colors.vermilion} size={14} />
-                    <Text style={styles.skillActionText}>编辑</Text>
+                    <Text style={styles.skillActionText}>查看/编辑</Text>
                   </Pressable>
                   <Pressable
                     style={styles.skillActionButton}
                     onPress={() => {
-                      Alert.alert('功能开发中', '重新蒸馏功能即将上线');
+                      router.push(`/ancestors/${id}/interview` as any);
                     }}
                   >
                     <RefreshCw color={Colors.vermilion} size={14} />
@@ -241,8 +241,7 @@ export default function AncestorDetailScreen() {
                     pressed && styles.interviewButtonPressed,
                   ]}
                   onPress={() => {
-                    // 后续跳转 /ancestors/[id]/interview
-                    Alert.alert('功能开发中', '访谈蒸馏功能即将上线');
+                    router.push(`/ancestors/${id}/interview` as any);
                   }}
                 >
                   <BookOpen color={Colors.paper} size={18} />
