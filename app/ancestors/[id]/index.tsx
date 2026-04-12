@@ -17,11 +17,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   MapPin,
   Map,
-  BookOpen,
   MessageCircle,
   Mic,
   Calendar,
-  Navigation,
   ChevronLeft,
   Trash2,
   Sparkles,
@@ -196,10 +194,10 @@ export default function AncestorDetailScreen() {
             status={waypointCount > 0 ? 'done' : 'pending'}
           />
 
-          {/* 3. 访谈记录 · 蒸馏 .skill */}
+          {/* 3. 蒸馏人格 · .skill */}
           <FeatureCard
-            icon={<BookOpen color={Colors.jade} size={22} />}
-            title="访谈记录 · 蒸馏 .skill"
+            icon={<Sparkles color={Colors.jade} size={22} />}
+            title="蒸馏人格 · .skill"
           >
             {hasSkill ? (
               <View>
@@ -222,7 +220,7 @@ export default function AncestorDetailScreen() {
                   <Pressable
                     style={styles.skillActionButton}
                     onPress={() => {
-                      router.push(`/ancestors/${id}/interview` as any);
+                      router.push(`/ancestors/${id}/distill` as any);
                     }}
                   >
                     <RefreshCw color={Colors.vermilion} size={14} />
@@ -233,7 +231,7 @@ export default function AncestorDetailScreen() {
             ) : (
               <View>
                 <Text style={styles.interviewHint}>
-                  通过 20 个引导式问题，记录长辈的记忆和故事，AI 会将其蒸馏为可对话的数字人格
+                  上传聊天记录、口述回忆等素材，AI 会将其蒸馏为可对话的数字人格
                 </Text>
                 <Pressable
                   style={({ pressed }) => [
@@ -241,12 +239,12 @@ export default function AncestorDetailScreen() {
                     pressed && styles.interviewButtonPressed,
                   ]}
                   onPress={() => {
-                    router.push(`/ancestors/${id}/interview` as any);
+                    router.push(`/ancestors/${id}/distill` as any);
                   }}
                 >
-                  <BookOpen color={Colors.paper} size={18} />
+                  <Sparkles color={Colors.paper} size={18} />
                   <Text style={styles.interviewButtonText}>
-                    开始访谈 → 蒸馏人格
+                    开始蒸馏
                   </Text>
                 </Pressable>
               </View>

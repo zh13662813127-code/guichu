@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   MapPin,
-  BookOpen,
+  Sparkles,
   MessageCircle,
   Map,
   ChevronRight,
@@ -73,9 +73,9 @@ const QUICK_ACTIONS: QuickAction[] = [
     needsAncestor: false,
   },
   {
-    key: 'interview',
-    icon: <BookOpen color={Colors.jade} size={24} />,
-    label: '访谈长辈',
+    key: 'distill',
+    icon: <Sparkles color={Colors.jade} size={24} />,
+    label: '蒸馏人格',
     needsAncestor: true,
   },
   {
@@ -164,8 +164,8 @@ export default function HomeScreen() {
             Alert.alert('请先添加长辈', '添加长辈后才能记录墓地位置');
           }
           break;
-        case 'interview':
-          // 跳转长辈列表，后续选择后进入访谈
+        case 'distill':
+          // 跳转长辈列表，后续选择后进入蒸馏
           router.push('/ancestors' as any);
           break;
         case 'chat':
@@ -216,13 +216,8 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            {/* ── 区域 B：快捷功能卡片区 ── */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickActionsContainer}
-              style={styles.quickActionsScroll}
-            >
+            {/* ── 区域 B：快捷功能卡片区（用 View 替代 ScrollView，避免 Web 端事件被吞） ── */}
+            <View style={styles.quickActionsRow}>
               {QUICK_ACTIONS.map((action) => (
                 <Pressable
                   key={action.key}
@@ -236,7 +231,7 @@ export default function HomeScreen() {
                   <Text style={styles.quickCardLabel}>{action.label}</Text>
                 </Pressable>
               ))}
-            </ScrollView>
+            </View>
 
             {/* ── 区域 C：我的长辈 ── */}
             <View style={styles.sectionHeader}>
@@ -250,12 +245,8 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.ancestorListContainer}
-              style={styles.ancestorListScroll}
-            >
+            {/* 用 View 替代横向 ScrollView，避免 Web 端 Pressable 事件被吞 */}
+            <View style={styles.ancestorListRow}>
               {hasAncestors ? (
                 <>
                   {ancestors.map((ancestor) => (
@@ -311,7 +302,7 @@ export default function HomeScreen() {
                   </Text>
                 </Pressable>
               )}
-            </ScrollView>
+            </View>
 
             {/* ── 区域 D：习俗时间线 ── */}
             <View style={styles.sectionHeader}>
@@ -525,16 +516,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // 区域 B：快捷功能
-  quickActionsScroll: {
-    marginTop: 8,
-  },
-  quickActionsContainer: {
+  // 区域 B：快捷功能（普通 View 行布局，Web 端兼容）
+  quickActionsRow: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
     gap: 10,
+    marginTop: 8,
   },
   quickCard: {
-    width: 120,
+    flex: 1,
     height: 80,
     backgroundColor: Colors.paperDark,
     borderRadius: 14,
@@ -581,11 +571,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // 区域 C：我的长辈
-  ancestorListScroll: {
-    // 无需额外样式
-  },
-  ancestorListContainer: {
+  // 区域 C：我的长辈（普通 View 行布局，Web 端兼容）
+  ancestorListRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 20,
     gap: 12,
   },

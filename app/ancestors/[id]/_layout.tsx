@@ -36,6 +36,13 @@ export default function AncestorDetailLayout() {
         }}
       />
       <Stack.Screen
+        name="distill"
+        options={{
+          title: '蒸馏人格',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
         name="skill-preview"
         options={{
           title: '人格档案',
