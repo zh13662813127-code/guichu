@@ -1,0 +1,17 @@
+{
+  "region": "山东省/潍坊市",
+  "overrides": {
+    "qingming": {
+      "bring_extra": ["饺子", "单饼"],
+      "notes": "潍坊习俗清明上坟带饺子和单饼"
+    },
+    "fifth_seven": {
+      "notes": "潍坊五七有「扎马」的习俗，用纸扎的马烧给逝者"
+    }
+  },
+  "spring_festival_couplets": {
+    "year_1": { "color": "白色", "note": "守孝第一年只贴白色对联" },
+    "year_2": { "color": "绿色或蓝色", "note": "第二年贴绿色或蓝色" },
+    "year_3_plus": { "color": "红色", "note": "三年后恢复正常" }
+  }
+}

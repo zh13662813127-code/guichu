@@ -1,0 +1,116 @@
+{
+  "death_based": [
+    {
+      "key": "first_seven",
+      "name": "头七",
+      "offset_days": 7,
+      "description": "去世后第七天，传说亡灵会回家探望",
+      "todo": ["家中设灵位", "准备饭菜供奉", "烧纸钱"],
+      "bring": ["纸钱", "香烛", "供饭"],
+      "home_notes": "头七当晚家中留灯，门不上锁"
+    },
+    {
+      "key": "third_seven",
+      "name": "三七",
+      "offset_days": 21,
+      "description": "去世后第二十一天",
+      "todo": ["上坟烧纸", "供奉饭菜"],
+      "bring": ["纸钱", "香烛", "供品"],
+      "home_notes": null
+    },
+    {
+      "key": "fifth_seven",
+      "name": "五七",
+      "offset_days": 35,
+      "description": "去世后第三十五天，五七是最重要的一个七",
+      "todo": ["大祭", "请亲友", "上坟"],
+      "bring": ["纸钱", "香烛", "供品", "鲜花", "酒"],
+      "home_notes": "五七大祭，通常请和尚或道士做法事"
+    },
+    {
+      "key": "seventh_seven",
+      "name": "七七",
+      "offset_days": 49,
+      "description": "去世后第四十九天，做七结束",
+      "todo": ["最后一次做七", "烧纸", "上坟"],
+      "bring": ["纸钱", "香烛", "供品"],
+      "home_notes": "做七结束，灵位可撤"
+    },
+    {
+      "key": "hundred_days",
+      "name": "百日",
+      "offset_days": 100,
+      "description": "去世后一百天",
+      "todo": ["上坟", "烧纸", "祭拜"],
+      "bring": ["纸钱", "香烛", "供果"],
+      "home_notes": null
+    },
+    {
+      "key": "anniversary_1",
+      "name": "周年祭",
+      "offset_years": 1,
+      "description": "去世满一年，大祭",
+      "todo": ["上坟大祭", "烧纸", "供品丰盛"],
+      "bring": ["纸钱", "香烛", "供品", "鲜花", "酒", "水果"],
+      "home_notes": null
+    },
+    {
+      "key": "anniversary_3",
+      "name": "三周年祭",
+      "offset_years": 3,
+      "description": "去世满三年，最后一次大祭，之后转为常规祭扫",
+      "todo": ["三年大祭", "上坟", "烧纸", "请客"],
+      "bring": ["纸钱", "香烛", "供品", "鲜花", "酒", "水果"],
+      "home_notes": "三周年后恢复正常生活，春节可贴红对联"
+    }
+  ],
+  "annual": [
+    {
+      "key": "qingming",
+      "name": "清明节",
+      "type": "solar_term",
+      "description": "传统扫墓节日，一般在公历4月4-6日",
+      "todo": ["扫墓", "清理杂草", "上香烧纸", "添土"],
+      "bring": ["纸钱", "香烛", "供果", "酒", "鲜花"],
+      "home_notes": null
+    },
+    {
+      "key": "zhongyuan",
+      "name": "中元节",
+      "type": "lunar",
+      "lunar_month": 7,
+      "lunar_day": 15,
+      "description": "农历七月十五，也叫七月半、鬼节",
+      "todo": ["烧纸钱", "放河灯", "祭祖"],
+      "bring": ["纸钱", "香烛", "河灯"],
+      "home_notes": "有些地方七月十四就开始祭祖"
+    },
+    {
+      "key": "hanyi",
+      "name": "寒衣节",
+      "type": "lunar",
+      "lunar_month": 10,
+      "lunar_day": 1,
+      "description": "农历十月初一，给亡人送寒衣",
+      "todo": ["烧纸衣", "上坟", "祭拜"],
+      "bring": ["纸钱", "纸衣", "香烛"],
+      "home_notes": null
+    },
+    {
+      "key": "chuxi",
+      "name": "除夕",
+      "type": "lunar",
+      "lunar_month": 12,
+      "lunar_day": 30,
+      "description": "年三十，祭祖、请祖宗回家过年",
+      "todo": ["祭祖", "摆供桌", "烧纸"],
+      "bring": ["纸钱", "香烛", "年夜饭供品"],
+      "home_notes": null
+    }
+  ],
+  "spring_festival_couplets": {
+    "year_1": { "color": "白色或蓝色", "note": "去世第一年春节不贴红对联" },
+    "year_2": { "color": "绿色", "note": "第二年贴绿色对联过渡" },
+    "year_3_plus": { "color": "红色", "note": "第三年恢复红色对联" }
+  }
+}
