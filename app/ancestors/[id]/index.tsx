@@ -1,39 +1,556 @@
 /**
- * 长辈详情页 -- 占位
- * 后续实现完整的长辈资料展示
+ * 长辈详情页 — 完整的长辈资料与功能入口
+ * 包含：基本信息、墓地位置、寻路指南、访谈蒸馏、对话、声音、习俗日历
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  MapPin,
+  Map,
+  BookOpen,
+  MessageCircle,
+  Mic,
+  Calendar,
+  Navigation,
+  ChevronLeft,
+  Trash2,
+  Sparkles,
+  Volume2,
+  Edit3,
+  RefreshCw,
+} from 'lucide-react-native';
 import { Colors } from '../../../src/constants/colors';
+import { useAncestorStore, type Ancestor } from '../../../src/stores/ancestorStore';
+import { AvatarCircle } from '../../../src/components/AvatarCircle';
+import { FeatureCard } from '../../../src/components/FeatureCard';
+import { calculateRituals, type RitualEvent } from '../../../src/features/rituals/calcRituals';
+
+// ─── 辅助函数 ───────────────────────────────────────────
+
+/** 格式化生卒年显示 */
+function formatLifespan(ancestor: Ancestor): string {
+  const parts: string[] = [];
+  if (ancestor.birth_year) parts.push(`${ancestor.birth_year}年生`);
+  if (ancestor.death_year) parts.push(`${ancestor.death_year}年卒`);
+  return parts.join(' · ');
+}
+
+/** 获取下一个即将到来的习俗事件 */
+function getNextRitual(events: RitualEvent[]): RitualEvent | null {
+  const upcoming = events.filter((e) => !e.isPast);
+  return upcoming.length > 0 ? upcoming[0] : null;
+}
+
+// ─── 主组件 ─────────────────────────────────────────────
 
 export default function AncestorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { ancestors, loadAncestors, removeAncestor } = useAncestorStore();
+
+  useEffect(() => {
+    loadAncestors();
+  }, []);
+
+  // 找到当前长辈
+  const ancestor = useMemo(
+    () => ancestors.find((a) => a.id === id) ?? null,
+    [ancestors, id],
+  );
+
+  // 计算习俗事件
+  const ritualEvents = useMemo(() => {
+    if (!ancestor?.death_date) return [];
+    return calculateRituals(ancestor.death_date);
+  }, [ancestor?.death_date]);
+
+  const nextRitual = useMemo(() => getNextRitual(ritualEvents), [ritualEvents]);
+
+  // 判断功能状态
+  const hasSkill = !!ancestor?.skill_content;
+  const hasVoice = !!ancestor?.voice_id;
+  // 墓地/路线数据暂时用 placeholder，后续从 DB 查询
+  const hasGrave = false;
+  const waypointCount = 0;
+
+  /** 删除长辈（二次确认） */
+  const handleDelete = useCallback(() => {
+    if (!ancestor) return;
+    Alert.alert(
+      `确认删除「${ancestor.name}」？`,
+      '删除后所有相关数据（访谈、对话、位置记录）将一并删除，且无法恢复。',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            await removeAncestor(ancestor.id);
+            router.back();
+          },
+        },
+      ],
+    );
+  }, [ancestor, removeAncestor, router]);
+
+  // 长辈不存在的兜底
+  if (!ancestor) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>长辈信息不存在</Text>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.backLink}>返回</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const lifespan = formatLifespan(ancestor);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>长辈详情</Text>
-      <Text style={styles.hint}>详情页开发中...</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      {/* 顶部导航栏 */}
+      <View style={styles.navBar}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <ChevronLeft color={Colors.ink} size={24} />
+        </Pressable>
+        <Text style={styles.navTitle} numberOfLines={1}>
+          {ancestor.name}
+        </Text>
+        <View style={styles.navSpacer} />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── 顶部：长辈基本信息 ── */}
+        <View style={styles.profileSection}>
+          <AvatarCircle name={ancestor.name} size={100} />
+          <Text style={styles.profileName}>{ancestor.name}</Text>
+
+          {/* 关系 · 生卒年 */}
+          <Text style={styles.profileMeta}>
+            {[ancestor.relationship, lifespan].filter(Boolean).join(' · ')}
+          </Text>
+
+          {/* 标签行 */}
+          <View style={styles.tagRow}>
+            {hasSkill && (
+              <View style={[styles.tag, styles.tagJade]}>
+                <Sparkles color={Colors.jade} size={12} />
+                <Text style={styles.tagTextJade}>已蒸馏</Text>
+              </View>
+            )}
+            {hasVoice && (
+              <View style={[styles.tag, styles.tagAmber]}>
+                <Volume2 color={Colors.amber} size={12} />
+                <Text style={styles.tagTextAmber}>有声音</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* ── 功能卡片列表 ── */}
+        <View style={styles.cardsSection}>
+          {/* 1. 墓地位置 */}
+          <FeatureCard
+            icon={<MapPin color={Colors.vermilion} size={22} />}
+            title="墓地位置"
+            description={
+              hasGrave ? '已记录位置坐标' : '还没有记录位置'
+            }
+            actionLabel={hasGrave ? '导航到此处' : '去记录'}
+            onAction={() =>
+              router.push(`/ancestors/${id}/confirm-location` as any)
+            }
+            status={hasGrave ? 'done' : 'pending'}
+          />
+
+          {/* 2. 寻路指南 */}
+          <FeatureCard
+            icon={<Map color={Colors.inkLight} size={22} />}
+            title="寻路指南"
+            description={
+              waypointCount > 0
+                ? `已记录 ${waypointCount} 个路线点`
+                : '记录从村口到墓地的路线'
+            }
+            actionLabel={waypointCount > 0 ? '查看路线' : '开始记录'}
+            onAction={() => {
+              Alert.alert('功能开发中', '寻路指南记录功能即将上线');
+            }}
+            status={waypointCount > 0 ? 'done' : 'pending'}
+          />
+
+          {/* 3. 访谈记录 · 蒸馏 .skill */}
+          <FeatureCard
+            icon={<BookOpen color={Colors.jade} size={22} />}
+            title="访谈记录 · 蒸馏 .skill"
+          >
+            {hasSkill ? (
+              <View>
+                <View style={styles.skillPreview}>
+                  <Text style={styles.skillPreviewText} numberOfLines={4}>
+                    {ancestor.skill_content!.slice(0, 100)}
+                    {ancestor.skill_content!.length > 100 ? '...' : ''}
+                  </Text>
+                </View>
+                <View style={styles.skillActions}>
+                  <Pressable
+                    style={styles.skillActionButton}
+                    onPress={() => {
+                      Alert.alert('功能开发中', '编辑 .skill 功能即将上线');
+                    }}
+                  >
+                    <Edit3 color={Colors.vermilion} size={14} />
+                    <Text style={styles.skillActionText}>编辑</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.skillActionButton}
+                    onPress={() => {
+                      Alert.alert('功能开发中', '重新蒸馏功能即将上线');
+                    }}
+                  >
+                    <RefreshCw color={Colors.vermilion} size={14} />
+                    <Text style={styles.skillActionText}>重新蒸馏</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.interviewHint}>
+                  通过 20 个引导式问题，记录长辈的记忆和故事，AI 会将其蒸馏为可对话的数字人格
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.interviewButton,
+                    pressed && styles.interviewButtonPressed,
+                  ]}
+                  onPress={() => {
+                    // 后续跳转 /ancestors/[id]/interview
+                    Alert.alert('功能开发中', '访谈蒸馏功能即将上线');
+                  }}
+                >
+                  <BookOpen color={Colors.paper} size={18} />
+                  <Text style={styles.interviewButtonText}>
+                    开始访谈 → 蒸馏人格
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </FeatureCard>
+
+          {/* 4. 对话 */}
+          <FeatureCard
+            icon={<MessageCircle color={Colors.amber} size={22} />}
+            title="对话"
+            description={
+              hasSkill
+                ? `和${ancestor.name}聊聊`
+                : '先完成访谈蒸馏才能对话'
+            }
+            actionLabel={hasSkill ? `和${ancestor.name}聊聊` : undefined}
+            onAction={
+              hasSkill
+                ? () => {
+                    // 后续跳转 /ancestors/[id]/chat
+                    Alert.alert('功能开发中', '对话功能即将上线');
+                  }
+                : undefined
+            }
+            status={hasSkill ? 'pending' : 'disabled'}
+          />
+
+          {/* 5. 声音档案 */}
+          <FeatureCard
+            icon={<Mic color={Colors.inkLight} size={22} />}
+            title="声音档案"
+            description={
+              hasVoice ? '已训练声音模型' : '训练声音，让对话更真实'
+            }
+            actionLabel="训练声音"
+            onAction={() => {
+              Alert.alert('功能开发中', '声音训练功能即将上线');
+            }}
+            status={hasVoice ? 'done' : 'pending'}
+          />
+
+          {/* 6. 习俗日历 */}
+          <FeatureCard
+            icon={<Calendar color={Colors.vermilion} size={22} />}
+            title="习俗日历"
+          >
+            {nextRitual ? (
+              <View>
+                <View style={styles.ritualPreview}>
+                  <Text style={styles.ritualPreviewName}>
+                    {nextRitual.name}
+                  </Text>
+                  <Text style={styles.ritualPreviewCountdown}>
+                    {nextRitual.daysFromNow === 0
+                      ? '就在今天'
+                      : `${nextRitual.daysFromNow} 天后`}
+                  </Text>
+                </View>
+                <Text style={styles.ritualPreviewDate}>
+                  {nextRitual.dateSolar}
+                  {nextRitual.dateLunar ? ` · ${nextRitual.dateLunar}` : ''}
+                </Text>
+                <Pressable
+                  style={styles.viewAllRituals}
+                  onPress={() => {
+                    // 后续可跳转习俗日历详情
+                    router.push('/' as any);
+                  }}
+                >
+                  <Text style={styles.viewAllRitualsText}>查看全部日历</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.noRitualText}>
+                {ancestor.death_date
+                  ? '暂无即将到来的习俗日子'
+                  : '添加去世日期后，习俗日历将自动生成'}
+              </Text>
+            )}
+          </FeatureCard>
+        </View>
+
+        {/* ── 底部：删除按钮 ── */}
+        <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <Trash2 color={Colors.crimson} size={16} />
+          <Text style={styles.deleteButtonText}>删除此长辈</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+// ─── 样式 ─────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.paper,
-    padding: 20,
-    paddingTop: 60,
   },
-  title: {
+
+  // 兜底空态
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    color: Colors.inkMute,
+    fontSize: 16,
+  },
+  backLink: {
+    color: Colors.vermilion,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+
+  // 顶部导航栏
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  backButton: {
+    padding: 4,
+  },
+  navTitle: {
+    flex: 1,
+    textAlign: 'center',
     color: Colors.ink,
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  navSpacer: {
+    width: 32, // 平衡返回按钮
+  },
+
+  // 滚动容器
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 60,
+  },
+
+  // 基本信息区
+  profileSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  profileName: {
+    color: Colors.ink,
+    fontSize: 24,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  profileMeta: {
+    color: Colors.inkLight,
+    fontSize: 15,
+    marginTop: 6,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagJade: {
+    backgroundColor: Colors.jade + '18',
+  },
+  tagTextJade: {
+    color: Colors.jade,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tagAmber: {
+    backgroundColor: Colors.amber + '18',
+  },
+  tagTextAmber: {
+    color: Colors.amber,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  // 功能卡片区
+  cardsSection: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+
+  // 访谈 .skill 相关
+  skillPreview: {
+    backgroundColor: Colors.paper,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+  },
+  skillPreviewText: {
+    color: Colors.inkLight,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  skillActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  skillActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.vermilion,
+  },
+  skillActionText: {
+    color: Colors.vermilion,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  interviewHint: {
+    color: Colors.inkLight,
+    fontSize: 13,
+    lineHeight: 20,
     marginBottom: 12,
   },
-  hint: {
-    color: Colors.inkMute,
+  interviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.vermilion,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  interviewButtonPressed: {
+    backgroundColor: Colors.vermilionPressed,
+  },
+  interviewButtonText: {
+    color: Colors.paper,
     fontSize: 15,
+    fontWeight: '600',
+  },
+
+  // 习俗日历预览
+  ritualPreview: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  ritualPreviewName: {
+    color: Colors.ink,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  ritualPreviewCountdown: {
+    color: Colors.vermilion,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  ritualPreviewDate: {
+    color: Colors.inkMute,
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  viewAllRituals: {
+    paddingVertical: 6,
+  },
+  viewAllRitualsText: {
+    color: Colors.vermilion,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  noRitualText: {
+    color: Colors.inkMute,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+
+  // 删除按钮
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 32,
+    paddingVertical: 12,
+  },
+  deleteButtonText: {
+    color: Colors.crimson,
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

@@ -15,10 +15,30 @@ export default function AncestorDetailLayout() {
       }}
     >
       <Stack.Screen
+        name="index"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="confirm-location"
         options={{
           presentation: 'modal',
           title: '确认墓址位置',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="interview"
+        options={{
+          title: '访谈记录',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="skill-preview"
+        options={{
+          title: '人格档案',
           headerShown: true,
         }}
       />

@@ -1,9 +1,9 @@
 /**
- * 主页 -- 时间线日历视图
- * 展示所有长辈的习俗事件时间线
+ * 首页 — 丰富的归处主界面
+ * 包含：标题栏、快捷功能区、我的长辈、习俗时间线
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,26 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, ChevronRight, Navigation } from 'lucide-react-native';
+import {
+  MapPin,
+  BookOpen,
+  MessageCircle,
+  Map,
+  ChevronRight,
+  Navigation,
+  Plus,
+  Calendar,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 import { useAncestorStore } from '../src/stores/ancestorStore';
+import { AvatarCircle } from '../src/components/AvatarCircle';
 import { calculateRituals, type RitualEvent } from '../src/features/rituals/calcRituals';
+
+// ─── 类型定义 ───────────────────────────────────────────
 
 /** 带长辈名的事件 */
 interface TimelineEvent extends RitualEvent {
@@ -33,12 +46,53 @@ interface DateGroup {
   isPast: boolean;
 }
 
+// ─── 辅助函数 ───────────────────────────────────────────
+
 /** 格式化日期为 "4月5日 周日" */
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr);
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   return `${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
 }
+
+// ─── 快捷功能定义 ───────────────────────────────────────
+
+interface QuickAction {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  /** 是否需要已有长辈才能使用 */
+  needsAncestor: boolean;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    key: 'pin',
+    icon: <MapPin color={Colors.vermilion} size={24} />,
+    label: '记录墓地',
+    needsAncestor: false,
+  },
+  {
+    key: 'interview',
+    icon: <BookOpen color={Colors.jade} size={24} />,
+    label: '访谈长辈',
+    needsAncestor: true,
+  },
+  {
+    key: 'chat',
+    icon: <MessageCircle color={Colors.amber} size={24} />,
+    label: '对话',
+    needsAncestor: true,
+  },
+  {
+    key: 'route',
+    icon: <Map color={Colors.inkLight} size={24} />,
+    label: '寻路指南',
+    needsAncestor: true,
+  },
+];
+
+// ─── 主组件 ─────────────────────────────────────────────
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -50,7 +104,7 @@ export default function HomeScreen() {
 
   // 当前年月
   const now = new Date();
-  const headerTitle = `归处 · ${now.getFullYear()}年${now.getMonth() + 1}月`;
+  const headerDate = `${now.getFullYear()}年${now.getMonth() + 1}月`;
 
   // 计算所有长辈的习俗事件
   const dateGroups = useMemo(() => {
@@ -90,28 +144,67 @@ export default function HomeScreen() {
     return groups;
   }, [ancestors]);
 
+  const hasAncestors = ancestors.length > 0;
   const hasEvents = dateGroups.length > 0;
+
+  /** 快捷功能点击处理 */
+  const handleQuickAction = useCallback(
+    (action: QuickAction) => {
+      if (action.needsAncestor && !hasAncestors) {
+        Alert.alert('请先添加长辈', '前往「长辈」页面添加你的第一位家人');
+        return;
+      }
+
+      switch (action.key) {
+        case 'pin':
+          // 如果有长辈，跳转第一个长辈的定位确认页；否则提示先添加
+          if (hasAncestors) {
+            router.push(`/ancestors/${ancestors[0].id}/confirm-location` as any);
+          } else {
+            Alert.alert('请先添加长辈', '添加长辈后才能记录墓地位置');
+          }
+          break;
+        case 'interview':
+          // 跳转长辈列表，后续选择后进入访谈
+          router.push('/ancestors' as any);
+          break;
+        case 'chat':
+          router.push('/ancestors' as any);
+          break;
+        case 'route':
+          router.push('/ancestors' as any);
+          break;
+      }
+    },
+    [hasAncestors, ancestors, router],
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 顶部固定区 */}
+      {/* ── 区域 A：顶部标题栏 ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
+        <View>
+          <Text style={styles.headerTitle}>归处</Text>
+          <Text style={styles.headerDate}>{headerDate}</Text>
+        </View>
         <Pressable
           style={({ pressed }) => [
             styles.pinButton,
             pressed && styles.pinButtonPressed,
           ]}
           onPress={() => {
-            // 跳转到定位功能（后续实现）
+            if (hasAncestors) {
+              router.push(`/ancestors/${ancestors[0].id}/confirm-location` as any);
+            } else {
+              Alert.alert('请先添加长辈', '添加长辈后才能记录墓地位置');
+            }
           }}
         >
-          <MapPin color={Colors.paper} size={18} />
+          <MapPin color={Colors.paper} size={16} />
           <Text style={styles.pinButtonText}>记录此地</Text>
         </Pressable>
       </View>
 
-      {/* 时间线 */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -121,160 +214,270 @@ export default function HomeScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={Colors.vermilion} size="large" />
           </View>
-        ) : !hasEvents ? (
-          /* 空状态 */
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>
-              在你还来得及的时候，{'\n'}把他们留下来。
-            </Text>
-            <Text style={styles.emptyHint}>
-              按下方「长辈」添加你的第一位家人{'\n'}添加去世日期后，习俗提醒将自动出现
-            </Text>
-          </View>
         ) : (
-          /* 事件时间线 */
-          dateGroups.map((group) => (
-            <View key={group.dateSolar} style={styles.dateGroup}>
-              {/* 日期分隔标题 */}
-              <View style={styles.dateDivider}>
-                <View style={styles.dividerLine} />
-                <Text
-                  style={[
-                    styles.dateTitle,
-                    group.isPast && styles.dateTitlePast,
+          <>
+            {/* ── 区域 B：快捷功能卡片区 ── */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickActionsContainer}
+              style={styles.quickActionsScroll}
+            >
+              {QUICK_ACTIONS.map((action) => (
+                <Pressable
+                  key={action.key}
+                  style={({ pressed }) => [
+                    styles.quickCard,
+                    pressed && styles.quickCardPressed,
                   ]}
+                  onPress={() => handleQuickAction(action)}
                 >
-                  {group.displayDate}
-                </Text>
-                <View style={styles.dividerLine} />
-              </View>
+                  {action.icon}
+                  <Text style={styles.quickCardLabel}>{action.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
 
-              {/* 该日期下的事件卡片 */}
-              {group.events.map((event) => (
-                <View
-                  key={`${event.key}_${event.ancestorId}`}
-                  style={[
-                    styles.eventCard,
-                    event.isPast && styles.eventCardPast,
-                  ]}
-                >
-                  {/* 卡片顶部：长辈名 + 习俗名 + 倒计时 */}
-                  <View style={styles.eventHeader}>
-                    <View style={styles.eventTitleRow}>
-                      <Text
-                        style={[
-                          styles.ancestorName,
-                          event.isPast && styles.textMute,
-                        ]}
-                      >
-                        {event.ancestorName}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.ritualName,
-                          event.isPast && styles.textMute,
-                        ]}
-                      >
-                        {event.name}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.countdown,
-                        event.isPast && styles.textMute,
-                      ]}
-                    >
-                      {event.isPast
-                        ? '已过'
-                        : event.daysFromNow === 0
-                        ? '今天'
-                        : `${event.daysFromNow}天后`}
-                    </Text>
-                  </View>
+            {/* ── 区域 C：我的长辈 ── */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>我的长辈</Text>
+              <Pressable
+                style={styles.addButton}
+                onPress={() => router.push('/ancestors/new' as any)}
+              >
+                <Plus color={Colors.vermilion} size={16} />
+                <Text style={styles.addButtonText}>添加</Text>
+              </Pressable>
+            </View>
 
-                  {/* 描述 */}
-                  <Text
-                    style={[
-                      styles.eventDescription,
-                      event.isPast && styles.textMute,
-                    ]}
-                  >
-                    {event.description}
-                  </Text>
-
-                  {/* 需带物品（最多显示前3个） */}
-                  {event.bringItems.length > 0 && (
-                    <Text
-                      style={[
-                        styles.bringItems,
-                        event.isPast && styles.textMute,
-                      ]}
-                    >
-                      需带：{event.bringItems.slice(0, 3).join('、')}
-                      {event.bringItems.length > 3 ? ' 等' : ''}
-                    </Text>
-                  )}
-
-                  {/* 地方特色标签 */}
-                  {event.homeNotes && !event.isPast && (
-                    <View style={styles.regionTag}>
-                      <Text style={styles.regionTagText}>
-                        {event.homeNotes}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* 底部操作按钮 */}
-                  <View style={styles.eventActions}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.ancestorListContainer}
+              style={styles.ancestorListScroll}
+            >
+              {hasAncestors ? (
+                <>
+                  {ancestors.map((ancestor) => (
                     <Pressable
-                      style={styles.actionButton}
+                      key={ancestor.id}
+                      style={({ pressed }) => [
+                        styles.ancestorCard,
+                        pressed && styles.ancestorCardPressed,
+                      ]}
                       onPress={() =>
-                        router.push(`/ancestors/${event.ancestorId}` as any)
+                        router.push(`/ancestors/${ancestor.id}` as any)
                       }
                     >
-                      <ChevronRight
-                        color={event.isPast ? Colors.inkMute : Colors.vermilion}
-                        size={16}
-                      />
-                      <Text
-                        style={[
-                          styles.actionText,
-                          event.isPast && styles.textMute,
-                        ]}
-                      >
-                        查看详情
+                      <AvatarCircle name={ancestor.name} size={60} />
+                      <Text style={styles.ancestorCardName} numberOfLines={1}>
+                        {ancestor.name}
                       </Text>
+                      {ancestor.relationship ? (
+                        <Text style={styles.ancestorCardRelation} numberOfLines={1}>
+                          {ancestor.relationship}
+                        </Text>
+                      ) : null}
                     </Pressable>
-                    <Pressable style={styles.actionButton}>
-                      <Navigation
-                        color={event.isPast ? Colors.inkMute : Colors.vermilion}
-                        size={16}
-                      />
-                      <Text
-                        style={[
-                          styles.actionText,
-                          event.isPast && styles.textMute,
-                        ]}
-                      >
-                        导航
-                      </Text>
-                    </Pressable>
+                  ))}
+                  {/* 添加卡片 */}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.ancestorCard,
+                      styles.addAncestorCard,
+                      pressed && styles.ancestorCardPressed,
+                    ]}
+                    onPress={() => router.push('/ancestors/new' as any)}
+                  >
+                    <View style={styles.addAncestorCircle}>
+                      <Plus color={Colors.inkMute} size={24} />
+                    </View>
+                    <Text style={styles.addAncestorText}>添加</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable
+                  style={styles.emptyAncestorCard}
+                  onPress={() => router.push('/ancestors/new' as any)}
+                >
+                  <View style={styles.addAncestorCircle}>
+                    <Plus color={Colors.inkMute} size={28} />
                   </View>
-                </View>
-              ))}
+                  <Text style={styles.emptyAncestorTitle}>
+                    添加你的第一位家人
+                  </Text>
+                  <Text style={styles.emptyAncestorHint}>
+                    记录他们的故事，留住珍贵的记忆
+                  </Text>
+                </Pressable>
+              )}
+            </ScrollView>
+
+            {/* ── 区域 D：习俗时间线 ── */}
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Calendar color={Colors.inkLight} size={18} />
+                <Text style={styles.sectionTitle}>习俗提醒</Text>
+              </View>
             </View>
-          ))
+
+            {hasEvents ? (
+              dateGroups.map((group) => (
+                <View key={group.dateSolar} style={styles.dateGroup}>
+                  {/* 日期分隔标题 */}
+                  <View style={styles.dateDivider}>
+                    <View style={styles.dividerLine} />
+                    <Text
+                      style={[
+                        styles.dateTitle,
+                        group.isPast && styles.dateTitlePast,
+                      ]}
+                    >
+                      {group.displayDate}
+                    </Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  {/* 该日期下的事件卡片 */}
+                  {group.events.map((event) => (
+                    <View
+                      key={`${event.key}_${event.ancestorId}`}
+                      style={[
+                        styles.eventCard,
+                        event.isPast && styles.eventCardPast,
+                      ]}
+                    >
+                      <View style={styles.eventHeader}>
+                        <View style={styles.eventTitleRow}>
+                          <Text
+                            style={[
+                              styles.ancestorName,
+                              event.isPast && styles.textMute,
+                            ]}
+                          >
+                            {event.ancestorName}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.ritualName,
+                              event.isPast && styles.textMute,
+                            ]}
+                          >
+                            {event.name}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.countdown,
+                            event.isPast && styles.textMute,
+                          ]}
+                        >
+                          {event.isPast
+                            ? '已过'
+                            : event.daysFromNow === 0
+                            ? '今天'
+                            : `${event.daysFromNow}天后`}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={[
+                          styles.eventDescription,
+                          event.isPast && styles.textMute,
+                        ]}
+                      >
+                        {event.description}
+                      </Text>
+
+                      {event.bringItems.length > 0 && (
+                        <Text
+                          style={[
+                            styles.bringItems,
+                            event.isPast && styles.textMute,
+                          ]}
+                        >
+                          需带：{event.bringItems.slice(0, 3).join('、')}
+                          {event.bringItems.length > 3 ? ' 等' : ''}
+                        </Text>
+                      )}
+
+                      {event.homeNotes && !event.isPast && (
+                        <View style={styles.regionTag}>
+                          <Text style={styles.regionTagText}>
+                            {event.homeNotes}
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={styles.eventActions}>
+                        <Pressable
+                          style={styles.actionButton}
+                          onPress={() =>
+                            router.push(`/ancestors/${event.ancestorId}` as any)
+                          }
+                        >
+                          <ChevronRight
+                            color={
+                              event.isPast ? Colors.inkMute : Colors.vermilion
+                            }
+                            size={16}
+                          />
+                          <Text
+                            style={[
+                              styles.actionText,
+                              event.isPast && styles.textMute,
+                            ]}
+                          >
+                            查看详情
+                          </Text>
+                        </Pressable>
+                        <Pressable style={styles.actionButton}>
+                          <Navigation
+                            color={
+                              event.isPast ? Colors.inkMute : Colors.vermilion
+                            }
+                            size={16}
+                          />
+                          <Text
+                            style={[
+                              styles.actionText,
+                              event.isPast && styles.textMute,
+                            ]}
+                          >
+                            导航
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyRitualCard}>
+                <Calendar color={Colors.inkMute} size={32} />
+                <Text style={styles.emptyRitualText}>
+                  {hasAncestors
+                    ? '添加长辈的去世日期后，\n习俗提醒将自动出现'
+                    : '添加长辈后，\n习俗提醒将自动出现'}
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── 样式 ─────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.paper,
   },
+
+  // 区域 A：标题栏
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -284,17 +487,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: Colors.ink,
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
+  },
+  headerDate: {
+    color: Colors.inkMute,
+    fontSize: 14,
+    marginTop: 2,
   },
   pinButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.vermilion,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 9999,
-    gap: 6,
+    gap: 5,
   },
   pinButtonPressed: {
     backgroundColor: Colors.vermilionPressed,
@@ -304,41 +512,147 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+
+  // 滚动容器
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   loadingContainer: {
     paddingTop: 80,
     alignItems: 'center',
   },
-  // 空状态
-  emptyCard: {
+
+  // 区域 B：快捷功能
+  quickActionsScroll: {
+    marginTop: 8,
+  },
+  quickActionsContainer: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  quickCard: {
+    width: 120,
+    height: 80,
+    backgroundColor: Colors.paperDark,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickCardPressed: {
+    opacity: 0.7,
+  },
+  quickCardLabel: {
+    color: Colors.ink,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  // 通用区段标题
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sectionTitle: {
+    color: Colors.ink,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addButtonText: {
+    color: Colors.vermilion,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // 区域 C：我的长辈
+  ancestorListScroll: {
+    // 无需额外样式
+  },
+  ancestorListContainer: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  ancestorCard: {
+    alignItems: 'center',
+    width: 80,
+  },
+  ancestorCardPressed: {
+    opacity: 0.7,
+  },
+  ancestorCardName: {
+    color: Colors.ink,
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  ancestorCardRelation: {
+    color: Colors.inkMute,
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  addAncestorCard: {
+    // 继承 ancestorCard
+  },
+  addAncestorCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: Colors.divider,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addAncestorText: {
+    color: Colors.inkMute,
+    fontSize: 13,
+    marginTop: 6,
+  },
+  // 空长辈引导
+  emptyAncestorCard: {
+    flex: 1,
     backgroundColor: Colors.paperDark,
     borderRadius: 16,
-    padding: 32,
+    padding: 24,
     alignItems: 'center',
-    marginTop: 24,
+    minWidth: 280,
   },
-  emptyTitle: {
+  emptyAncestorTitle: {
     color: Colors.inkLight,
-    fontSize: 17,
-    textAlign: 'center',
-    lineHeight: 26,
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 12,
   },
-  emptyHint: {
+  emptyAncestorHint: {
     color: Colors.inkMute,
-    fontSize: 14,
-    marginTop: 16,
+    fontSize: 13,
+    marginTop: 6,
     textAlign: 'center',
-    lineHeight: 22,
   },
-  // 日期分组
+
+  // 区域 D：习俗时间线
   dateGroup: {
-    marginTop: 20,
+    paddingHorizontal: 20,
+    marginTop: 16,
   },
   dateDivider: {
     flexDirection: 'row',
@@ -359,7 +673,6 @@ const styles = StyleSheet.create({
   dateTitlePast: {
     color: Colors.inkMute,
   },
-  // 事件卡片
   eventCard: {
     backgroundColor: Colors.paperDark,
     borderRadius: 16,
@@ -440,5 +753,21 @@ const styles = StyleSheet.create({
     color: Colors.vermilion,
     fontSize: 14,
     fontWeight: '500',
+  },
+
+  // 空习俗提醒
+  emptyRitualCard: {
+    backgroundColor: Colors.paperDark,
+    borderRadius: 16,
+    padding: 32,
+    marginHorizontal: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyRitualText: {
+    color: Colors.inkMute,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
