@@ -86,7 +86,7 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 
 ---
 
-## 阶段 2：F2 — 导航回坟墓
+## 阶段 2：F2 — 寻路指南 + 导航
 
 ### 2.1 长辈列表页
 - `app/ancestors/index.tsx`
@@ -96,25 +96,46 @@ npm install -D @types/react @types/node eslint eslint-config-expo prettier jest 
 ### 2.2 长辈详情页
 - `app/ancestors/[id].tsx`
 - 展示头像、姓名、关系、生卒年
-- 墓地位置卡片（含缩略图、坐标、照片轮播）
-- 功能入口：访谈 / 对话 / 声音训练
+- 墓地位置卡片 + 寻路指南入口
+- 功能入口：寻路指南 / 访谈 / 对话 / 声音训练
 
-### 2.3 导航功能
-- `src/features/grave-pin/useNavigate.ts`
-- 检测设备平台 + 用户偏好的地图 App
-- 拼接 URL scheme 调起第三方地图
-- 支持 Apple Maps / 高德 / 百度 / Google Maps
-
-### 2.4 新建长辈页
+### 2.3 新建长辈页
 - `app/ancestors/new.tsx`
 - 最简表单：姓名（必填）、关系（下拉）、性别、生年、卒年
 
-### 2.5 验证
+### 2.4 路线记录模式
+- `app/ancestors/[id]/route/record.tsx`
+- 全屏模式，底部常驻「📌 记录路线点」大按钮
+- 每个路线点：自动 GPS + 拍照/相册选图（必选≥1张）+ 文字备注 + 语音
+- 写入 `route_waypoints` 表，`sort_order` 自增
+- 终点自动关联 `grave_locations`
+
+### 2.5 寻路指南页（查看）
+- `app/ancestors/[id]/route.tsx`
+- 竖向图文列表：每个路线点 = 大图 + 备注 + 两点间距离
+- 支持编辑路线点（改图片/备注）、删除、中间插入
+- 底部两个导航按钮：「导航到起点」/「导航到终点」
+
+### 2.6 步进寻路模式
+- 全屏卡片：一次显示一个路线点的大图 + 备注
+- 「上一步 / 下一步」切换
+- 最后一步显示「你到了」
+
+### 2.7 调起第三方地图
+- `src/features/grave-pin/useNavigate.ts`
+- 支持 Apple Maps / 高德 / 百度 / Google Maps
+- 用户偏好存 MMKV
+
+### 2.8 验证
 ```
 ✅ 列表页展示已录入的长辈
-✅ 详情页展示墓地位置
-✅ 点击导航 → 调起手机地图 App
+✅ 详情页展示墓地位置 + 寻路指南入口
+✅ 记录路线：走 5 个点 → 拍照 → 备注 → 保存
+✅ 寻路指南：图文列表 + 两点间距离正确
+✅ 步进模式：一步步翻页 → 到终点
+✅ 导航按钮 → 调起手机地图 App
 ✅ 新建长辈流程 30 秒可完成
+✅ 路线点可编辑/删除/插入
 ```
 
 ---

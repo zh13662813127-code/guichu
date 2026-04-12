@@ -73,7 +73,37 @@ CREATE TABLE grave_locations (
 CREATE INDEX idx_grave_ancestor ON grave_locations(ancestor_id);
 ```
 
-### 2.3 `interviews`（访谈记录表）
+### 2.3 `route_waypoints`（路线点表 — 寻路指南）
+
+记录从起点（如村口）到坟墓的沿途标志性路线点，按顺序串联形成图文寻路指南。
+
+```sql
+CREATE TABLE route_waypoints (
+  id                TEXT PRIMARY KEY,
+  grave_id          TEXT NOT NULL REFERENCES grave_locations(id) ON DELETE CASCADE,
+  sort_order        INTEGER NOT NULL,          -- 排序序号（0 起始，终点序号最大）
+  latitude          REAL NOT NULL,
+  longitude         REAL NOT NULL,
+  accuracy_meters   REAL,
+  photo_paths       TEXT NOT NULL,             -- JSON 数组，≥1 张图：["wp_001.jpg","wp_002.jpg"]
+  note              TEXT,                      -- 文字备注（≤50 字，如"左转上坡"、"过桥后直走"）
+  audio_note_path   TEXT,                      -- 语音备注路径（可空，≤30 秒）
+  is_endpoint       INTEGER DEFAULT 0,         -- 1=终点（即坟墓位置），0=沿途路线点
+  recorded_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_waypoint_grave ON route_waypoints(grave_id);
+CREATE INDEX idx_waypoint_order ON route_waypoints(grave_id, sort_order);
+```
+
+**设计要点**：
+- `sort_order` 支持中间插入（留间距 10，如 0/10/20/30，插入时取中间值 15）
+- `photo_paths` 至少 1 张照片（拍路口/标志物），可有多张
+- 终点 `is_endpoint=1` 的路线点自动取 `grave_locations` 的坐标
+- 删除 grave_location 级联删除所有路线点
+
+### 2.4 `interviews`（访谈记录表）
 
 ```sql
 CREATE TABLE interviews (
