@@ -42,6 +42,41 @@ export default function AncestorDetailLayout() {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="route"
+        options={{
+          title: '寻路指南',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="route-record"
+        options={{
+          title: '记录路线',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="chat"
+        options={{
+          title: '对话',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="rituals"
+        options={{
+          title: '习俗日历',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="rituals/[key]"
+        options={{
+          title: '习俗详情',
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 }
