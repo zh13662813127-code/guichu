@@ -150,29 +150,44 @@ export default function HomeScreen() {
   /** 快捷功能点击处理 */
   const handleQuickAction = useCallback(
     (action: QuickAction) => {
+      // 没有长辈时，所有功能都跳转到添加长辈页
       if (action.needsAncestor && !hasAncestors) {
-        Alert.alert('请先添加长辈', '前往「长辈」页面添加你的第一位家人');
+        router.push('/ancestors/new' as any);
+        return;
+      }
+      if (!hasAncestors && action.key === 'pin') {
+        router.push('/ancestors/new' as any);
         return;
       }
 
+      // 有长辈时，直接跳转到对应功能页
+      // 如果只有一个长辈，直接进入；多个长辈则跳到列表页让用户选
+      const firstId = ancestors[0]?.id;
+
       switch (action.key) {
         case 'pin':
-          // 如果有长辈，跳转第一个长辈的定位确认页；否则提示先添加
-          if (hasAncestors) {
-            router.push(`/ancestors/${ancestors[0].id}/confirm-location` as any);
-          } else {
-            Alert.alert('请先添加长辈', '添加长辈后才能记录墓地位置');
-          }
+          router.push(`/ancestors/${firstId}/confirm-location` as any);
           break;
         case 'distill':
-          // 跳转长辈列表，后续选择后进入蒸馏
-          router.push('/ancestors' as any);
+          if (ancestors.length === 1) {
+            router.push(`/ancestors/${firstId}/distill` as any);
+          } else {
+            router.push('/ancestors' as any);
+          }
           break;
         case 'chat':
-          router.push('/ancestors' as any);
+          if (ancestors.length === 1) {
+            router.push(`/ancestors/${firstId}/chat` as any);
+          } else {
+            router.push('/ancestors' as any);
+          }
           break;
         case 'route':
-          router.push('/ancestors' as any);
+          if (ancestors.length === 1) {
+            router.push(`/ancestors/${firstId}/route` as any);
+          } else {
+            router.push('/ancestors' as any);
+          }
           break;
       }
     },
@@ -196,7 +211,7 @@ export default function HomeScreen() {
             if (hasAncestors) {
               router.push(`/ancestors/${ancestors[0].id}/confirm-location` as any);
             } else {
-              Alert.alert('请先添加长辈', '添加长辈后才能记录墓地位置');
+              router.push('/ancestors/new' as any);
             }
           }}
         >

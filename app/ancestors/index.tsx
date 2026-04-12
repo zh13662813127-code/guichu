@@ -104,16 +104,22 @@ export default function AncestorsScreen() {
           <ActivityIndicator color={Colors.vermilion} size="large" />
         </View>
       ) : ancestors.length === 0 ? (
-        /* 空状态 */
+        /* 空状态 — 整张卡片可点击跳转添加 */
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyCard}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.emptyCard,
+              pressed && { opacity: 0.8 },
+            ]}
+            onPress={() => router.push('/ancestors/new' as any)}
+          >
             <Text style={styles.emptyText}>
               还没有添加长辈
             </Text>
             <Text style={styles.emptyHint}>
-              点击右上角 + 添加你的第一位家人
+              点击这里添加你的第一位家人
             </Text>
-          </View>
+          </Pressable>
         </View>
       ) : (
         <FlatList
