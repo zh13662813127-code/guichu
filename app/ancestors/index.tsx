@@ -1,57 +1,155 @@
 /**
- * 长辈列表页
- * 纵向卡片排列，每张卡片显示头像+名字+关系+下一个重要节日
+ * 家族灵位 — 宗祠灵堂式灵牌树状图
+ * 按 generation 分组，远祖在上，近亲在下
+ * 每个人用"灵牌"样式卡片展示
  */
 
 import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
-  FlatList,
+  ScrollView,
   Pressable,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, ChevronRight, Calendar } from 'lucide-react-native';
+import { Plus, Camera } from 'lucide-react-native';
 import { Colors } from '../../src/constants/colors';
 import { useAncestorStore, type Ancestor } from '../../src/stores/ancestorStore';
-import { AvatarCircle } from '../../src/components/AvatarCircle';
-import { calculateRituals } from '../../src/features/rituals/calcRituals';
 
-/** 获取某位长辈下一个即将到来的习俗事件 */
-function getNextRitual(ancestor: Ancestor): { name: string; daysFromNow: number } | null {
-  if (!ancestor.death_date) return null;
-  try {
-    const events = calculateRituals(ancestor.death_date);
-    const upcoming = events.filter((e) => !e.isPast);
-    if (upcoming.length === 0) return null;
-    return { name: upcoming[0].name, daysFromNow: upcoming[0].daysFromNow };
-  } catch {
-    return null;
-  }
+// ─── 辈分标签文字 ────────────────────────────────────────
+function generationLabel(gen: number): string {
+  const labels = ['', '第一世', '第二世', '第三世', '第四世', '第五世', '第六世', '第七世', '第八世', '第九世', '第十世'];
+  if (gen > 0 && gen < labels.length) return labels[gen];
+  return `第${gen}世`;
 }
 
-/** 生卒年显示 */
-function formatLifespan(a: Ancestor): string {
-  const birth = a.birth_year ? `${a.birth_year}` : '?';
-  const death = a.death_year
-    ? `${a.death_year}`
-    : a.death_date
-    ? a.death_date.split('-')[0]
-    : '健在';
-  return `${birth} — ${death}`;
+// ─── 灵牌组件 ────────────────────────────────────────────
+function SpiritTablet({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => void }) {
+  // 名字竖排
+  const nameChars = ancestor.name.split('');
+  const lifespan =
+    ancestor.birth_year && ancestor.death_year
+      ? `${ancestor.birth_year}-${ancestor.death_year}`
+      : ancestor.birth_year
+        ? `${ancestor.birth_year}-`
+        : ancestor.death_year
+          ? `?-${ancestor.death_year}`
+          : '';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [tabletStyles.container, pressed && { opacity: 0.8 }]}
+    >
+      {/* 顶部朱砂装饰线 */}
+      <View style={tabletStyles.topLine} />
+
+      {/* 灵牌主体（仿木牌） */}
+      <View style={tabletStyles.tablet}>
+        {nameChars.map((char, i) => (
+          <Text key={i} style={tabletStyles.nameChar}>
+            {char}
+          </Text>
+        ))}
+      </View>
+
+      {/* 底部信息 */}
+      {ancestor.relationship ? (
+        <Text style={tabletStyles.relationship}>{ancestor.relationship}</Text>
+      ) : null}
+      {lifespan ? <Text style={tabletStyles.lifespan}>{lifespan}</Text> : null}
+    </Pressable>
+  );
 }
 
-/** 倒计时文字 */
-function countdownText(days: number): string {
-  if (days === 0) return '今天';
-  if (days === 1) return '明天';
-  return `${days}天后`;
+const tabletStyles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.paperDark,
+    borderRadius: 6,
+    padding: 8,
+    alignItems: 'center',
+    minWidth: 80,
+    maxWidth: 100,
+  },
+  topLine: {
+    width: '80%',
+    height: 2,
+    backgroundColor: Colors.vermilion,
+    borderRadius: 1,
+    marginBottom: 6,
+  },
+  tablet: {
+    backgroundColor: '#3D2C1E',
+    borderRadius: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    minHeight: 60,
+  },
+  nameChar: {
+    color: Colors.paper,
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 4,
+    lineHeight: 26,
+  },
+  relationship: {
+    color: Colors.vermilion,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  lifespan: {
+    color: Colors.inkMute,
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
+
+// ─── 辈分分隔线 ────────────────────────────────────────────
+function GenerationDivider({ gen }: { gen: number }) {
+  return (
+    <View style={dividerStyles.container}>
+      <View style={dividerStyles.line} />
+      <Text style={dividerStyles.label}>{generationLabel(gen)}</Text>
+      <View style={dividerStyles.line} />
+    </View>
+  );
 }
 
+const dividerStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 20,
+  },
+  line: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.divider,
+  },
+  label: {
+    color: Colors.inkLight,
+    fontSize: 12,
+    fontWeight: '500',
+    paddingHorizontal: 12,
+  },
+});
+
+// ─── 辈分间连接线 ────────────────────────────────────────
+function ConnectionLine() {
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 4 }}>
+      <View style={{ width: 1, height: 16, backgroundColor: Colors.divider }} />
+    </View>
+  );
+}
+
+// ─── 主页面 ──────────────────────────────────────────────
 export default function AncestorsScreen() {
   const router = useRouter();
   const { ancestors, isLoading, loadAncestors } = useAncestorStore();
@@ -60,61 +158,27 @@ export default function AncestorsScreen() {
     loadAncestors();
   }, []);
 
-  // 为每位长辈计算下一个节日
-  const ancestorsWithRitual = useMemo(() => {
-    return ancestors.map((a) => ({
-      ancestor: a,
-      nextRitual: getNextRitual(a),
+  // 按 generation 分组，从大到小排列（远祖在上）
+  const generationGroups = useMemo(() => {
+    if (ancestors.length === 0) return [];
+
+    const grouped: Record<number, Ancestor[]> = {};
+    for (const a of ancestors) {
+      const gen = a.generation || 1;
+      if (!grouped[gen]) grouped[gen] = [];
+      grouped[gen].push(a);
+    }
+
+    // 按 generation 从大到小排序
+    const sortedGens = Object.keys(grouped)
+      .map(Number)
+      .sort((a, b) => b - a);
+
+    return sortedGens.map((gen) => ({
+      generation: gen,
+      ancestors: grouped[gen],
     }));
   }, [ancestors]);
-
-  const renderCard = ({ item }: { item: (typeof ancestorsWithRitual)[0] }) => {
-    const { ancestor, nextRitual } = item;
-
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-        onPress={() => router.push(`/ancestors/${ancestor.id}` as any)}
-      >
-        {/* 左：头像，有 avatar_path 显示真实头像 */}
-        {ancestor.avatar_path ? (
-          <Image
-            source={{ uri: ancestor.avatar_path }}
-            style={{ width: 56, height: 56, borderRadius: 28 }}
-          />
-        ) : (
-          <AvatarCircle name={ancestor.name} size={56} />
-        )}
-
-        {/* 中：基本信息 */}
-        <View style={styles.cardInfo}>
-          <View style={styles.nameRow}>
-            {ancestor.relationship && (
-              <Text style={styles.cardRelation}>{ancestor.relationship}</Text>
-            )}
-            <Text style={styles.cardName}>{ancestor.name}</Text>
-          </View>
-          <Text style={styles.cardLifespan}>{formatLifespan(ancestor)}</Text>
-        </View>
-
-        {/* 右：下一个节日 + 箭头 */}
-        <View style={styles.cardRight}>
-          {nextRitual ? (
-            <View style={styles.ritualInfo}>
-              <View style={styles.ritualRow}>
-                <Calendar color={Colors.vermilion} size={13} />
-                <Text style={styles.ritualName} numberOfLines={1}>{nextRitual.name}</Text>
-              </View>
-              <Text style={styles.ritualCountdown}>{countdownText(nextRitual.daysFromNow)}</Text>
-            </View>
-          ) : (
-            <Text style={styles.noRitual}>暂无提醒</Text>
-          )}
-          <ChevronRight color={Colors.inkMute} size={18} />
-        </View>
-      </Pressable>
-    );
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,13 +188,22 @@ export default function AncestorsScreen() {
           style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
           onPress={() => router.push('/ancestors/new' as any)}
         >
-          <Plus color={Colors.paper} size={18} />
+          <Plus color={Colors.paper} size={16} />
           <Text style={styles.addBtnText}>添加长辈</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>我的长辈</Text>
+
+        <Pressable
+          style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.7 }]}
+          onPress={() => router.push('/ancestors/scan' as any)}
+        >
+          <Camera color={Colors.vermilion} size={16} />
+          <Text style={styles.scanBtnText}>AI 识别</Text>
+        </Pressable>
+
+        <Text style={styles.headerTitle}>家族灵位</Text>
       </View>
 
-      {/* 列表 */}
+      {/* 内容区 */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={Colors.vermilion} size="large" />
@@ -149,18 +222,50 @@ export default function AncestorsScreen() {
           </Pressable>
         </View>
       ) : (
-        <FlatList
-          data={ancestorsWithRitual}
-          keyExtractor={(item) => item.ancestor.id}
-          contentContainerStyle={styles.listContent}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          renderItem={renderCard}
-        />
+        >
+          {/* 诗句 */}
+          <Text style={styles.motto}>慎终追远，民德归厚矣</Text>
+
+          {/* 按辈分渲染灵牌 */}
+          {generationGroups.map((group, groupIdx) => (
+            <View key={group.generation}>
+              {/* 辈分间连接线（非第一组才显示） */}
+              {groupIdx > 0 && <ConnectionLine />}
+
+              {/* 辈分标签 */}
+              <GenerationDivider gen={group.generation} />
+
+              {/* 同辈灵牌横向排列 */}
+              <View style={styles.tabletRow}>
+                {group.ancestors.map((ancestor) => (
+                  <SpiritTablet
+                    key={ancestor.id}
+                    ancestor={ancestor}
+                    onPress={() => router.push(`/ancestors/${ancestor.id}` as any)}
+                  />
+                ))}
+              </View>
+            </View>
+          ))}
+
+          {/* 底部添加按钮 */}
+          <Pressable
+            style={({ pressed }) => [styles.bottomAdd, pressed && { opacity: 0.7 }]}
+            onPress={() => router.push('/ancestors/new' as any)}
+          >
+            <Plus color={Colors.inkMute} size={18} />
+            <Text style={styles.bottomAddText}>添加更多长辈</Text>
+          </Pressable>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
 }
 
+// ─── 样式 ──────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   header: {
@@ -168,53 +273,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    gap: 14,
+    gap: 10,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.vermilion,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 9999,
     gap: 4,
   },
   addBtnPressed: { backgroundColor: Colors.vermilionPressed },
-  addBtnText: { color: Colors.paper, fontSize: 14, fontWeight: '600' },
-  headerTitle: { color: Colors.ink, fontSize: 20, fontWeight: '700' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContent: { paddingHorizontal: 20, paddingBottom: 32 },
-  // 卡片
-  card: {
-    backgroundColor: Colors.paperDark,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 10,
+  addBtnText: { color: Colors.paper, fontSize: 13, fontWeight: '600' },
+  scanBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.paperDark,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9999,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.vermilion,
   },
-  cardPressed: { opacity: 0.85 },
-  cardInfo: { flex: 1, marginLeft: 14 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  cardRelation: {
-    color: Colors.paper,
-    fontSize: 12,
-    fontWeight: '600',
-    backgroundColor: Colors.vermilion,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    overflow: 'hidden',
+  scanBtnText: { color: Colors.vermilion, fontSize: 13, fontWeight: '600' },
+  headerTitle: { color: Colors.ink, fontSize: 20, fontWeight: '700', marginLeft: 'auto' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // 诗句
+  motto: {
+    color: Colors.inkLight,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    fontStyle: 'italic',
+    letterSpacing: 2,
   },
-  cardName: { color: Colors.ink, fontSize: 17, fontWeight: '600' },
-  cardLifespan: { color: Colors.inkLight, fontSize: 13 },
-  // 右侧节日
-  cardRight: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
-  ritualInfo: { alignItems: 'flex-end' },
-  ritualRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ritualName: { color: Colors.vermilion, fontSize: 12, fontWeight: '500', maxWidth: 80 },
-  ritualCountdown: { color: Colors.inkLight, fontSize: 11, marginTop: 2 },
-  noRitual: { color: Colors.inkMute, fontSize: 12 },
+
+  // 滚动区域
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+
+  // 灵牌横向排列
+  tabletRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+  },
+
+  // 底部添加
+  bottomAdd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 32,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+  },
+  bottomAddText: { color: Colors.inkMute, fontSize: 14 },
+
   // 空状态
   emptyContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
   emptyCard: {

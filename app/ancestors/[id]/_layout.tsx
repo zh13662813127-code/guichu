@@ -21,6 +21,13 @@ export default function AncestorDetailLayout() {
         }}
       />
       <Stack.Screen
+        name="edit"
+        options={{
+          title: '编辑长辈资料',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
         name="confirm-location"
         options={{
           presentation: 'modal',

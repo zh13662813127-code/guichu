@@ -4,7 +4,7 @@
  * 优化：头像光晕、功能卡片彩色竖条、统一间距
  */
 
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../../src/constants/colors';
 import { useAncestorStore, type Ancestor } from '../../../src/stores/ancestorStore';
 import { AvatarCircle } from '../../../src/components/AvatarCircle';
+import { ConfirmModal } from '../../../src/components/ConfirmModal';
 import { FeatureCard } from '../../../src/components/FeatureCard';
 import { calculateRituals, type RitualEvent } from '../../../src/features/rituals/calcRituals';
 
@@ -89,6 +90,9 @@ export default function AncestorDetailScreen() {
 
   const nextRitual = useMemo(() => getNextRitual(ritualEvents), [ritualEvents]);
 
+  // 删除确认弹窗状态
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   // 判断功能状态
   const hasSkill = !!ancestor?.skill_content;
   const hasVoice = !!ancestor?.voice_id;
@@ -96,24 +100,12 @@ export default function AncestorDetailScreen() {
   const hasGrave = false;
   const waypointCount = 0;
 
-  /** 删除长辈（二次确认） */
-  const handleDelete = useCallback(() => {
+  /** 确认删除长辈 */
+  const confirmDelete = useCallback(async () => {
     if (!ancestor) return;
-    Alert.alert(
-      `确认删除「${ancestor.name}」？`,
-      '删除后所有相关数据（访谈、对话、位置记录）将一并删除，且无法恢复。',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            await removeAncestor(ancestor.id);
-            router.back();
-          },
-        },
-      ],
-    );
+    setShowDeleteModal(false);
+    await removeAncestor(ancestor.id);
+    router.back();
   }, [ancestor, removeAncestor, router]);
 
   // 长辈不存在的兜底
@@ -143,7 +135,12 @@ export default function AncestorDetailScreen() {
         <Text style={styles.navTitle} numberOfLines={1}>
           {ancestor.name}
         </Text>
-        <View style={styles.navSpacer} />
+        <Pressable
+          style={styles.editButton}
+          onPress={() => router.push(`/ancestors/${id}/edit` as any)}
+        >
+          <Edit3 color={Colors.vermilion} size={20} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -387,12 +384,24 @@ export default function AncestorDetailScreen() {
           </View>
 
           {/* ── 底部：删除按钮 ── */}
-          <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <Pressable style={styles.deleteButton} onPress={() => setShowDeleteModal(true)}>
             <Trash2 color={Colors.crimson} size={16} />
             <Text style={styles.deleteButtonText}>删除此长辈</Text>
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* 删除确认弹窗 — 替代 Alert.alert，兼容 Web 端 */}
+      <ConfirmModal
+        visible={showDeleteModal}
+        title={`确认删除「${ancestor.name}」？`}
+        message="删除后所有相关数据（访谈、对话、位置记录）将一并删除，且无法恢复。"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -449,8 +458,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  navSpacer: {
+  editButton: {
+    padding: 4,
     width: 32,
+    alignItems: 'center',
   },
 
   // 滚动容器

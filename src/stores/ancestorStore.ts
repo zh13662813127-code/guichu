@@ -49,6 +49,16 @@ interface AncestorStore {
   removeAncestor: (id: string) => Promise<void>;
   /** 更新长辈的 .skill 人格档案内容 */
   updateAncestorSkill: (id: string, skillContent: string) => Promise<void>;
+  /** 更新长辈基本资料 */
+  updateAncestorInfo: (id: string, data: {
+    name?: string;
+    relationship?: string;
+    gender?: string;
+    birthYear?: number;
+    deathYear?: number;
+    deathDate?: string;
+    honor?: string;
+  }) => Promise<void>;
 }
 
 export const useAncestorStore = create<AncestorStore>((set, get) => ({
@@ -136,6 +146,49 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
         ancestors: get().ancestors.map((a) =>
           a.id === id
             ? { ...a, skill_content: skillContent, updated_at: new Date().toISOString() }
+            : a
+        ),
+      });
+    }
+  },
+
+  updateAncestorInfo: async (id, data) => {
+    const now = new Date().toISOString();
+    if (isNative) {
+      const { updateAncestor } = await import('../db/queries/ancestors');
+      await updateAncestor(id, {
+        name: data.name,
+        relationship: data.relationship,
+        gender: data.gender as 'male' | 'female' | 'other' | undefined,
+        birth_year: data.birthYear,
+        death_year: data.deathYear,
+        death_date: data.deathDate,
+      });
+      // honor 字段在内存中更新（DB schema 暂未包含此字段）
+      if (data.honor !== undefined) {
+        set({
+          ancestors: get().ancestors.map((a) =>
+            a.id === id ? { ...a, honor: data.honor ?? null } : a
+          ),
+        });
+      }
+      await get().loadAncestors();
+    } else {
+      // Web 端：直接更新内存
+      set({
+        ancestors: get().ancestors.map((a) =>
+          a.id === id
+            ? {
+                ...a,
+                ...(data.name !== undefined && { name: data.name }),
+                ...(data.relationship !== undefined && { relationship: data.relationship }),
+                ...(data.gender !== undefined && { gender: data.gender as 'male' | 'female' | 'other' }),
+                ...(data.birthYear !== undefined && { birth_year: data.birthYear }),
+                ...(data.deathYear !== undefined && { death_year: data.deathYear }),
+                ...(data.deathDate !== undefined && { death_date: data.deathDate }),
+                ...(data.honor !== undefined && { honor: data.honor }),
+                updated_at: now,
+              }
             : a
         ),
       });
