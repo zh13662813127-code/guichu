@@ -22,6 +22,8 @@ interface FeatureCardProps {
   status?: 'done' | 'pending' | 'disabled';
   /** 自定义子内容，替代默认的 description + action 区域 */
   children?: React.ReactNode;
+  /** 左侧彩色竖条颜色（可选） */
+  accentColor?: string;
 }
 
 /**
@@ -35,11 +37,21 @@ export function FeatureCard({
   onAction,
   status = 'pending',
   children,
+  accentColor,
 }: FeatureCardProps) {
   const isDisabled = status === 'disabled';
 
   return (
     <View style={[styles.card, isDisabled && styles.cardDisabled]}>
+      {/* 左侧彩色竖条装饰 */}
+      {accentColor && (
+        <View
+          style={[
+            styles.accentBar,
+            { backgroundColor: accentColor },
+          ]}
+        />
+      )}
       <View style={styles.row}>
         {/* 左侧图标 */}
         <View style={styles.iconWrap}>{icon}</View>
@@ -99,6 +111,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  // 左侧彩色竖条
+  accentBar: {
+    position: 'absolute' as const,
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 3,
+    borderRadius: 1.5,
   },
   cardDisabled: {
     opacity: 0.6,

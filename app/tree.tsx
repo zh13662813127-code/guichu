@@ -2,6 +2,7 @@
  * 族谱树可视化页面
  * 纯 React Native View 实现，按 generation 分层排列
  * 支持纵向 + 横向滚动，带连接线
+ * 优化：虚线（已离世）/实线（健在）区分、书法风格标题、paperDark 背景纹理
  */
 
 import React, { useEffect, useMemo } from 'react';
@@ -19,6 +20,7 @@ import { Colors } from '../src/constants/colors';
 import { useAncestorStore, type Ancestor } from '../src/stores/ancestorStore';
 import { AvatarCircle } from '../src/components/AvatarCircle';
 import { PrimaryButton } from '../src/components/PrimaryButton';
+import { EmptyState } from '../src/components/EmptyState';
 
 // ─── 常量 ───────────────────────────────────────────
 const NODE_WIDTH = 96;
@@ -73,18 +75,20 @@ function TreeNode({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => vo
   );
 }
 
-// ─── 层间连接线组件 ─────────────────────────────────
-// 在两层之间绘制：先画一条竖线到中间横线高度，横线覆盖下层所有节点宽度，
-// 再从横线下方分出竖线到每个下层节点上方
+// ─── 层间连接线组件 —— 虚线（已离世）或实线（健在）区分 ─────
 
 interface ConnectorProps {
   /** 上层节点数 */
   topCount: number;
   /** 下层节点数 */
   bottomCount: number;
+  /** 上层节点列表（用于判断离世状态） */
+  topMembers: Ancestor[];
+  /** 下层节点列表 */
+  bottomMembers: Ancestor[];
 }
 
-function LayerConnector({ topCount, bottomCount }: ConnectorProps) {
+function LayerConnector({ topCount, bottomCount, topMembers, bottomMembers }: ConnectorProps) {
   // 计算上层和下层各自的总宽度（含间距）
   const topWidth = topCount * NODE_WIDTH + (topCount - 1) * NODE_GAP;
   const bottomWidth = bottomCount * NODE_WIDTH + (bottomCount - 1) * NODE_GAP;
@@ -114,18 +118,25 @@ function LayerConnector({ topCount, bottomCount }: ConnectorProps) {
 
   const halfH = CONNECTOR_HEIGHT / 2;
 
+  // 判断连线是否用虚线样式（如果所有上层成员都已离世）
+  const allTopDeceased = topMembers.every(isDeceased);
+
   return (
     <View style={[styles.connectorArea, { width: totalWidth, height: CONNECTOR_HEIGHT }]}>
       {/* 从上层每个节点中心向下画竖线到中间横线 */}
-      {topCenters.map((cx, idx) => (
-        <View
-          key={`tv-${idx}`}
-          style={[
-            styles.vLine,
-            { left: cx - 1, top: 0, height: halfH },
-          ]}
-        />
-      ))}
+      {topCenters.map((cx, idx) => {
+        const memberDeceased = topMembers[idx] ? isDeceased(topMembers[idx]) : false;
+        return (
+          <View
+            key={`tv-${idx}`}
+            style={[
+              styles.vLine,
+              { left: cx - 1, top: 0, height: halfH },
+              memberDeceased && styles.lineDashed,
+            ]}
+          />
+        );
+      })}
 
       {/* 中间横线 */}
       {lineLeft < lineRight && (
@@ -133,20 +144,25 @@ function LayerConnector({ topCount, bottomCount }: ConnectorProps) {
           style={[
             styles.hLine,
             { left: lineLeft, top: halfH - 1, width: lineRight - lineLeft },
+            allTopDeceased && styles.lineDashed,
           ]}
         />
       )}
 
       {/* 从中间横线向下画竖线到下层每个节点 */}
-      {bottomCenters.map((cx, idx) => (
-        <View
-          key={`bv-${idx}`}
-          style={[
-            styles.vLine,
-            { left: cx - 1, top: halfH, height: halfH },
-          ]}
-        />
-      ))}
+      {bottomCenters.map((cx, idx) => {
+        const memberDeceased = bottomMembers[idx] ? isDeceased(bottomMembers[idx]) : false;
+        return (
+          <View
+            key={`bv-${idx}`}
+            style={[
+              styles.vLine,
+              { left: cx - 1, top: halfH, height: halfH },
+              memberDeceased && styles.lineDashed,
+            ]}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -182,15 +198,12 @@ export default function TreeScreen() {
           <Text style={styles.title}>族谱</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🌳</Text>
-          <Text style={styles.emptyTitle}>还没有家人</Text>
-          <Text style={styles.emptyHint}>
-            添加第一位长辈，开始构建你的家族树
-          </Text>
-          <PrimaryButton
-            title="添加第一位家人"
-            onPress={() => router.push('/ancestors/new' as any)}
-            style={{ marginTop: 24 }}
+          <EmptyState
+            title="还没有家人"
+            subtitle="添加第一位长辈，开始构建你的家族树"
+            actionLabel="添加第一位家人"
+            onAction={() => router.push('/ancestors/new' as any)}
+            quote="参天之木，必有其根"
           />
         </View>
       </SafeAreaView>
@@ -200,59 +213,68 @@ export default function TreeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        {/* 书法感标题 */}
         <Text style={styles.title}>族谱</Text>
         <Text style={styles.subtitle}>
           共 {ancestors.length} 位家人 · {layers.length} 代
         </Text>
       </View>
 
-      {/* 双向可滚动的族谱树 */}
+      {/* 双向可滚动的族谱树 —— 包裹在 paperDark 大卡片中 */}
       <ScrollView
         style={styles.scrollV}
         contentContainerStyle={styles.scrollVContent}
         showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          horizontal
-          contentContainerStyle={styles.scrollHContent}
-          showsHorizontalScrollIndicator={false}
-        >
-          <View style={styles.treeContainer}>
-            {layers.map((layer, layerIdx) => (
-              <React.Fragment key={layer.generation}>
-                {/* 层标题 */}
-                <View style={styles.layerHeader}>
-                  <View style={styles.layerBadge}>
-                    <Text style={styles.layerLabel}>
-                      第 {layer.generation} 代
-                    </Text>
-                  </View>
-                </View>
+        {/* Web 端居中 */}
+        <View style={styles.innerContainer}>
+          {/* paperDark 背景纹理卡片 */}
+          <View style={styles.treeBackground}>
+            <ScrollView
+              horizontal
+              contentContainerStyle={styles.scrollHContent}
+              showsHorizontalScrollIndicator={false}
+            >
+              <View style={styles.treeContainer}>
+                {layers.map((layer, layerIdx) => (
+                  <React.Fragment key={layer.generation}>
+                    {/* 层标题 */}
+                    <View style={styles.layerHeader}>
+                      <View style={styles.layerBadge}>
+                        <Text style={styles.layerLabel}>
+                          第 {layer.generation} 代
+                        </Text>
+                      </View>
+                    </View>
 
-                {/* 该层节点水平排列 */}
-                <View style={styles.layerRow}>
-                  {layer.members.map((ancestor) => (
-                    <TreeNode
-                      key={ancestor.id}
-                      ancestor={ancestor}
-                      onPress={() =>
-                        router.push(`/ancestors/${ancestor.id}` as any)
-                      }
-                    />
-                  ))}
-                </View>
+                    {/* 该层节点水平排列 */}
+                    <View style={styles.layerRow}>
+                      {layer.members.map((ancestor) => (
+                        <TreeNode
+                          key={ancestor.id}
+                          ancestor={ancestor}
+                          onPress={() =>
+                            router.push(`/ancestors/${ancestor.id}` as any)
+                          }
+                        />
+                      ))}
+                    </View>
 
-                {/* 层间连接线（最后一层不画） */}
-                {layerIdx < layers.length - 1 && (
-                  <LayerConnector
-                    topCount={layer.members.length}
-                    bottomCount={layers[layerIdx + 1].members.length}
-                  />
-                )}
-              </React.Fragment>
-            ))}
+                    {/* 层间连接线（最后一层不画） */}
+                    {layerIdx < layers.length - 1 && (
+                      <LayerConnector
+                        topCount={layer.members.length}
+                        bottomCount={layers[layerIdx + 1].members.length}
+                        topMembers={layer.members}
+                        bottomMembers={layers[layerIdx + 1].members}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+              </View>
+            </ScrollView>
           </View>
-        </ScrollView>
+        </View>
       </ScrollView>
 
       {/* 底部浮动添加按钮 */}
@@ -275,16 +297,28 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
+  // 书法感标题 — 大字号 + 粗体 + letter-spacing
   title: {
     color: Colors.ink,
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: 4,
   },
   subtitle: {
     color: Colors.inkLight,
     fontSize: 14,
     marginTop: 4,
+  },
+
+  // Web 端居中
+  innerContainer: {
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
 
   // 滚动容器
@@ -296,6 +330,20 @@ const styles = StyleSheet.create({
   },
   scrollHContent: {
     paddingHorizontal: 16,
+  },
+
+  // paperDark 背景纹理卡片 — 包裹整棵树
+  treeBackground: {
+    backgroundColor: Colors.paperDark,
+    borderRadius: 20,
+    marginHorizontal: 12,
+    paddingVertical: 20,
+    // 微妙阴影
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
 
   // 树容器
@@ -310,7 +358,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   layerBadge: {
-    backgroundColor: Colors.paperDark,
+    backgroundColor: Colors.paper,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -335,7 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 6,
     alignItems: 'center',
-    backgroundColor: Colors.paperDark,
+    backgroundColor: Colors.paper,
     borderWidth: 1.5,
     borderColor: Colors.divider,
     borderRadius: 12,
@@ -378,17 +426,24 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
   },
-  // 竖线
+  // 竖线 — 默认实线
   vLine: {
     position: 'absolute',
     width: 2,
     backgroundColor: Colors.divider,
   },
-  // 横线
+  // 横线 — 默认实线
   hLine: {
     position: 'absolute',
     height: 2,
     backgroundColor: Colors.divider,
+  },
+  // 虚线效果 — 用更浅的颜色 + 虚线边框模拟
+  lineDashed: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    borderStyle: 'dashed',
   },
 
   // 空状态
@@ -398,22 +453,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    color: Colors.ink,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  emptyHint: {
-    color: Colors.inkMute,
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
-  },
 
   // 底部浮动按钮
   fabContainer: {
@@ -421,5 +460,7 @@ const styles = StyleSheet.create({
     bottom: 32,
     left: 24,
     right: 24,
+    maxWidth: 680,
+    alignSelf: 'center',
   },
 });
