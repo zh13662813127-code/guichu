@@ -1,19 +1,21 @@
 /**
- * 寻路指南查看页
+ * 寻路指南查看页 — 户外轨迹 App 风格
+ * 参考两步路/咕咚的轨迹详情页设计
+ *
  * 状态 A：没有路线数据 → 引导记录
- * 状态 B：有路线数据 → 竖向图文列表 + 步进模式
+ * 状态 B：有路线数据 → 轨迹统计仪表盘 + 竖向时间轴 + 步进寻路模式
  *
  * MVP 阶段路线数据用 useState 模拟，预留 DB 接口
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   Modal,
-  Alert,
+  Image,
   StyleSheet,
   Dimensions,
 } from 'react-native';
@@ -21,7 +23,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../../src/constants/colors';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
+import { TrackStats } from '../../../src/components/TrackStats';
 import { navigateToLocation } from '../../../src/features/grave-pin/useNavigate';
+
+/* ------------------------------------------------------------------ */
+/*  数据结构                                                           */
+/* ------------------------------------------------------------------ */
 
 /** 路线点数据结构（预留 DB 接口） */
 interface RoutePoint {
@@ -73,7 +80,26 @@ const MOCK_ROUTE: RoutePoint[] = [
   },
 ];
 
-/** 步进模式组件 */
+/* ------------------------------------------------------------------ */
+/*  工具函数                                                           */
+/* ------------------------------------------------------------------ */
+
+/** 计算总距离（米） */
+function calcTotalDistance(points: RoutePoint[]): number {
+  return points.reduce((sum, p) => sum + (p.distanceToNext ?? 0), 0);
+}
+
+/** 按步行速度 80m/min 计算预计时间（分钟） */
+function calcEstimatedMinutes(totalMeters: number): number {
+  return totalMeters / 80;
+}
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+/* ------------------------------------------------------------------ */
+/*  步进寻路模式                                                       */
+/* ------------------------------------------------------------------ */
+
 function StepNavigator({
   points,
   visible,
@@ -87,7 +113,7 @@ function StepNavigator({
   const point = points[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === points.length - 1;
-  const screenWidth = Dimensions.get('window').width;
+  const progress = (currentStep + 1) / points.length;
 
   const handlePrev = () => {
     if (!isFirst) setCurrentStep((s) => s - 1);
@@ -106,52 +132,86 @@ function StepNavigator({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.stepContainer}>
-        {/* 顶部关闭按钮 */}
-        <View style={styles.stepHeader}>
-          <Text style={styles.stepCounter}>
-            {currentStep + 1} / {points.length}
+      <SafeAreaView style={stepStyles.container}>
+        {/* 顶部进度条 */}
+        <View style={stepStyles.progressBarBg}>
+          <View
+            style={[stepStyles.progressBarFill, { width: `${progress * 100}%` as any }]}
+          />
+        </View>
+
+        {/* 头部：步骤计数 + 关闭 */}
+        <View style={stepStyles.header}>
+          <Text style={stepStyles.counter}>
+            第 {currentStep + 1} 步 / 共 {points.length} 步
           </Text>
-          <Pressable onPress={onClose}>
-            <Text style={styles.stepClose}>关闭</Text>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Text style={stepStyles.close}>关闭</Text>
           </Pressable>
         </View>
 
-        {/* 大图片占位 */}
-        <View style={[styles.stepImage, { width: screenWidth - 32 }]}>
-          <Text style={styles.imagePlaceholderText}>
-            {point.imagePath ? '图片加载中...' : '暂无图片'}
-          </Text>
+        {/* 大图区域 */}
+        <View style={stepStyles.imageBox}>
+          {point.imagePath ? (
+            <Image
+              source={{ uri: point.imagePath }}
+              style={stepStyles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={stepStyles.imagePlaceholder}>
+              <Text style={stepStyles.imagePlaceholderIcon}>
+                {isLast ? '📍' : '📷'}
+              </Text>
+              <Text style={stepStyles.imagePlaceholderText}>暂无图片</Text>
+            </View>
+          )}
         </View>
 
         {/* 路线点信息 */}
-        <View style={styles.stepInfo}>
-          <Text style={styles.stepLabel}>
-            {isLast ? '📍 ' : `${point.order}. `}
-            {point.label}
+        <View style={stepStyles.info}>
+          <Text style={stepStyles.label}>
+            {isLast ? '📍 终点' : `${point.order}. ${point.label}`}
           </Text>
-          <Text style={styles.stepNote}>{point.note}</Text>
+          <Text style={stepStyles.note}>"{point.note}"</Text>
+          {point.distanceToNext != null && (
+            <Text style={stepStyles.distance}>
+              距下一个点约 {point.distanceToNext}m
+            </Text>
+          )}
         </View>
 
-        {/* 底部按钮 */}
-        <View style={styles.stepButtons}>
+        {/* 到达提示（最后一步） */}
+        {isLast && currentStep === points.length - 1 && (
+          <View style={stepStyles.arrivalBanner}>
+            <Text style={stepStyles.arrivalEmoji}>🎉🧨</Text>
+            <Text style={stepStyles.arrivalText}>再走一小段就到了！</Text>
+          </View>
+        )}
+
+        {/* 底部导航箭头 */}
+        <View style={stepStyles.navRow}>
           <Pressable
             onPress={handlePrev}
             disabled={isFirst}
-            style={[styles.stepBtn, isFirst && styles.stepBtnDisabled]}
+            style={[stepStyles.arrowBtn, isFirst && stepStyles.arrowBtnDisabled]}
           >
             <Text
               style={[
-                styles.stepBtnText,
-                isFirst && styles.stepBtnTextDisabled,
+                stepStyles.arrowText,
+                isFirst && stepStyles.arrowTextDisabled,
               ]}
             >
-              ← 上一步
+              ←
             </Text>
           </Pressable>
-          <Pressable onPress={handleNext} style={styles.stepBtnPrimary}>
-            <Text style={styles.stepBtnPrimaryText}>
-              {isLast ? '你到了' : '下一步 →'}
+
+          <Pressable
+            onPress={handleNext}
+            style={stepStyles.arrowBtnPrimary}
+          >
+            <Text style={stepStyles.arrowPrimaryText}>
+              {isLast ? '🎉 你到了' : '→'}
             </Text>
           </Pressable>
         </View>
@@ -160,6 +220,10 @@ function StepNavigator({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  主页面                                                             */
+/* ------------------------------------------------------------------ */
+
 export default function RouteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -167,10 +231,16 @@ export default function RouteScreen() {
   // MVP：用 state 模拟路线数据
   // 设为空数组可查看 "状态 A"，设为 MOCK_ROUTE 可查看 "状态 B"
   const [routePoints] = useState<RoutePoint[]>(MOCK_ROUTE);
-
   const [stepMode, setStepMode] = useState(false);
 
   const hasRoute = routePoints.length > 0;
+
+  // 轨迹统计数据
+  const totalDistance = useMemo(() => calcTotalDistance(routePoints), [routePoints]);
+  const estimatedMinutes = useMemo(
+    () => calcEstimatedMinutes(totalDistance),
+    [totalDistance],
+  );
 
   /** 导航到起点 */
   const handleNavigateStart = useCallback(() => {
@@ -194,17 +264,18 @@ export default function RouteScreen() {
     });
   }, [routePoints]);
 
-  /** 状态 A：没有路线数据 */
+  /* ---- 状态 A：没有路线数据 ---- */
   if (!hasRoute) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.emptyContent}>
-          <Text style={styles.pageTitle}>寻路指南</Text>
+          <Text style={styles.pageTitle}>🗺️ 寻路指南</Text>
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🗺️</Text>
+            <Text style={styles.emptyIcon}>🥾</Text>
             <Text style={styles.emptyTitle}>还没有记录路线</Text>
             <Text style={styles.emptyHint}>
-              从村口走到墓地时{'\n'}沿途拍照记录路线点
+              像户外徒步一样{'\n'}
+              从村口走到墓地时，沿途拍照记录路线点
             </Text>
             <PrimaryButton
               title="开始记录路线"
@@ -219,7 +290,7 @@ export default function RouteScreen() {
     );
   }
 
-  /** 状态 B：有路线数据 */
+  /* ---- 状态 B：有路线数据 ---- */
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <StepNavigator
@@ -232,68 +303,124 @@ export default function RouteScreen() {
         contentContainerStyle={styles.routeContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.pageTitle}>寻路指南</Text>
-        <Text style={styles.routeSummary}>
-          共 {routePoints.length} 个路线点
-        </Text>
+        {/* 页面标题 */}
+        <Text style={styles.pageTitle}>🗺️ 去墓地的路线</Text>
 
-        {/* 竖向图文列表 */}
-        {routePoints.map((point, idx) => {
-          const isLast = idx === routePoints.length - 1;
-          return (
-            <View key={point.id} style={styles.pointItem}>
-              {/* 序号标记 */}
-              <View style={styles.pointHeader}>
-                <View style={styles.pointBadge}>
-                  <Text style={styles.pointBadgeText}>
-                    {isLast ? '📍' : `${point.order}`}
-                  </Text>
+        {/* 轨迹统计仪表盘 */}
+        <TrackStats
+          totalDistance={totalDistance}
+          waypointCount={routePoints.length}
+          estimatedMinutes={estimatedMinutes}
+        />
+
+        {/* 路线详情标题 */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionLine} />
+          <Text style={styles.sectionTitle}>路线详情</Text>
+          <View style={styles.sectionLine} />
+        </View>
+
+        {/* 竖向时间轴 */}
+        <View style={styles.timeline}>
+          {routePoints.map((point, idx) => {
+            const isLast = idx === routePoints.length - 1;
+            const isFirstPoint = idx === 0;
+            return (
+              <View key={point.id}>
+                {/* 路线点行 */}
+                <View style={styles.timelineRow}>
+                  {/* 左侧：竖线 + 序号圆 */}
+                  <View style={styles.timelineLeft}>
+                    {/* 上半竖线（第一个点不显示） */}
+                    <View
+                      style={[
+                        styles.timelineLineTop,
+                        isFirstPoint && styles.timelineLineHidden,
+                      ]}
+                    />
+                    {/* 序号圆 */}
+                    <View
+                      style={[
+                        styles.timelineBadge,
+                        isLast && styles.timelineBadgeEnd,
+                      ]}
+                    >
+                      <Text style={styles.timelineBadgeText}>
+                        {isLast ? '📍' : `${point.order}`}
+                      </Text>
+                    </View>
+                    {/* 下半竖线（最后一个点不显示） */}
+                    <View
+                      style={[
+                        styles.timelineLineBottom,
+                        isLast && styles.timelineLineHidden,
+                      ]}
+                    />
+                  </View>
+
+                  {/* 右侧：路线点卡片 */}
+                  <View style={styles.timelineCard}>
+                    {/* 标签名 */}
+                    <Text style={styles.cardLabel}>
+                      {isLast ? '终点' : point.label}
+                      {isFirstPoint && !isLast ? '  起点' : ''}
+                    </Text>
+
+                    {/* 图片缩略图 + 备注 */}
+                    <View style={styles.cardBody}>
+                      {/* 缩略图 */}
+                      <View style={styles.thumbnail}>
+                        {point.imagePath ? (
+                          <Image
+                            source={{ uri: point.imagePath }}
+                            style={styles.thumbnailImage}
+                          />
+                        ) : (
+                          <Text style={styles.thumbnailPlaceholder}>📷</Text>
+                        )}
+                      </View>
+                      {/* 备注 + 坐标 */}
+                      <View style={styles.cardMeta}>
+                        <Text style={styles.cardNote}>"{point.note}"</Text>
+                        <Text style={styles.cardCoord}>
+                          📍 {point.latitude.toFixed(3)}, {point.longitude.toFixed(3)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.pointLabel}>
-                  {isLast ? `终点` : point.label}
-                </Text>
-              </View>
 
-              {/* 图片占位框 */}
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderText}>
-                  {point.imagePath ? '图片加载中...' : '暂无图片'}
-                </Text>
+                {/* 距离标注（在两个路线点之间） */}
+                {point.distanceToNext != null && (
+                  <View style={styles.timelineDistanceRow}>
+                    <View style={styles.timelineLeft}>
+                      <View style={styles.timelineLineFull} />
+                    </View>
+                    <View style={styles.distanceBadge}>
+                      <Text style={styles.distanceBadgeText}>
+                        ↕ {point.distanceToNext}m
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
-
-              {/* 备注 */}
-              <View style={styles.noteRow}>
-                <Text style={styles.noteIcon}>📝</Text>
-                <Text style={styles.noteText}>"{point.note}"</Text>
-              </View>
-
-              {/* 距离指示 */}
-              {point.distanceToNext != null && (
-                <View style={styles.distanceRow}>
-                  <View style={styles.distanceLine} />
-                  <Text style={styles.distanceText}>
-                    ↓ 约 {point.distanceToNext} 米
-                  </Text>
-                  <View style={styles.distanceLine} />
-                </View>
-              )}
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </ScrollView>
 
       {/* 底部按钮区 */}
       <View style={styles.bottomBar}>
         <View style={styles.navButtons}>
           <Pressable style={styles.navBtn} onPress={handleNavigateStart}>
-            <Text style={styles.navBtnText}>🧭 导航到起点</Text>
+            <Text style={styles.navBtnText}>🧭 导航起点</Text>
           </Pressable>
           <Pressable style={styles.navBtn} onPress={handleNavigateEnd}>
-            <Text style={styles.navBtnText}>🧭 导航到终点</Text>
+            <Text style={styles.navBtnText}>🧭 导航终点</Text>
           </Pressable>
         </View>
         <PrimaryButton
-          title="🚶 开始寻路"
+          title="🚶 开始寻路（步进模式）"
           onPress={() => setStepMode(true)}
         />
       </View>
@@ -301,26 +428,25 @@ export default function RouteScreen() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  主页面样式                                                         */
+/* ------------------------------------------------------------------ */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.paper,
   },
 
-  // 页面标题
+  /* 页面标题 */
   pageTitle: {
     color: Colors.ink,
     fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  routeSummary: {
-    color: Colors.inkMute,
-    fontSize: 14,
-    marginBottom: 20,
+    fontWeight: '700',
+    marginBottom: 16,
   },
 
-  // 状态 A — 空状态
+  /* 状态 A — 空状态 */
   emptyContent: {
     flex: 1,
     padding: 16,
@@ -347,93 +473,155 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // 状态 B — 路线列表
+  /* 状态 B — 路线列表 */
   routeContent: {
     padding: 16,
     paddingBottom: 200,
   },
 
-  // 路线点卡片
-  pointItem: {
-    marginBottom: 8,
-  },
-  pointHeader: {
+  /* 路线详情分割线标题 */
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 20,
   },
-  pointBadge: {
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.divider,
+  },
+  sectionTitle: {
+    color: Colors.inkLight,
+    fontSize: 14,
+    fontWeight: '500',
+    marginHorizontal: 12,
+  },
+
+  /* ========== 竖向时间轴 ========== */
+  timeline: {
+    paddingLeft: 4,
+  },
+
+  /* 路线点行 */
+  timelineRow: {
+    flexDirection: 'row',
+  },
+
+  /* 左侧竖线列 */
+  timelineLeft: {
+    width: 36,
+    alignItems: 'center',
+  },
+  timelineLineTop: {
+    width: 2,
+    height: 12,
+    backgroundColor: Colors.divider,
+  },
+  timelineLineBottom: {
+    width: 2,
+    flex: 1,
+    backgroundColor: Colors.divider,
+  },
+  timelineLineFull: {
+    width: 2,
+    flex: 1,
+    backgroundColor: Colors.divider,
+  },
+  timelineLineHidden: {
+    backgroundColor: 'transparent',
+  },
+
+  /* 序号圆 */
+  timelineBadge: {
     width: 28,
     height: 28,
     borderRadius: 14,
     backgroundColor: Colors.vermilion,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
   },
-  pointBadgeText: {
+  timelineBadgeEnd: {
+    backgroundColor: Colors.crimson,
+  },
+  timelineBadgeText: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
   },
-  pointLabel: {
+
+  /* 右侧路线点卡片 */
+  timelineCard: {
+    flex: 1,
+    marginLeft: 12,
+    marginBottom: 4,
+    backgroundColor: Colors.paperDark,
+    borderRadius: 12,
+    padding: 12,
+  },
+  cardLabel: {
     color: Colors.ink,
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 8,
+  },
+  cardBody: {
+    flexDirection: 'row',
   },
 
-  // 图片占位框
-  imagePlaceholder: {
-    width: '100%',
-    height: 150,
-    backgroundColor: Colors.paperDark,
-    borderRadius: 10,
+  /* 缩略图 */
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: Colors.divider,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginRight: 12,
+    overflow: 'hidden',
   },
-  imagePlaceholderText: {
-    color: Colors.inkMute,
-    fontSize: 14,
+  thumbnailImage: {
+    width: 80,
+    height: 80,
+  },
+  thumbnailPlaceholder: {
+    fontSize: 28,
+    opacity: 0.4,
   },
 
-  // 备注行
-  noteRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+  /* 备注 + 坐标 */
+  cardMeta: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  noteIcon: {
-    fontSize: 14,
-    marginRight: 6,
-    marginTop: 2,
-  },
-  noteText: {
+  cardNote: {
     color: Colors.inkLight,
     fontSize: 14,
     fontStyle: 'italic',
-    flex: 1,
+    lineHeight: 20,
+    marginBottom: 6,
   },
-
-  // 距离指示
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  distanceLine: {
-    height: 1,
-    flex: 1,
-    backgroundColor: Colors.divider,
-  },
-  distanceText: {
+  cardCoord: {
     color: Colors.inkMute,
-    fontSize: 13,
-    marginHorizontal: 12,
+    fontSize: 12,
   },
 
-  // 底部按钮区
+  /* 距离标注行 */
+  timelineDistanceRow: {
+    flexDirection: 'row',
+    height: 36,
+  },
+  distanceBadge: {
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  distanceBadgeText: {
+    color: Colors.inkMute,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  /* 底部按钮区 */
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -465,89 +653,151 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+});
 
-  // 步进模式
-  stepContainer: {
+/* ------------------------------------------------------------------ */
+/*  步进模式样式                                                       */
+/* ------------------------------------------------------------------ */
+
+const stepStyles = StyleSheet.create({
+  container: {
     flex: 1,
     backgroundColor: Colors.paper,
-    padding: 16,
   },
-  stepHeader: {
+
+  /* 顶部进度条 */
+  progressBarBg: {
+    height: 4,
+    backgroundColor: Colors.divider,
+  },
+  progressBarFill: {
+    height: 4,
+    backgroundColor: Colors.vermilion,
+    borderRadius: 2,
+  },
+
+  /* 头部 */
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  stepCounter: {
+  counter: {
     color: Colors.inkLight,
     fontSize: 15,
     fontWeight: '500',
   },
-  stepClose: {
+  close: {
     color: Colors.vermilion,
     fontSize: 15,
     fontWeight: '600',
   },
-  stepImage: {
-    height: 240,
+
+  /* 大图区域 */
+  imageBox: {
+    marginHorizontal: 16,
+    height: SCREEN_WIDTH - 32,
+    maxHeight: 360,
+    borderRadius: 16,
+    overflow: 'hidden',
     backgroundColor: Colors.paperDark,
-    borderRadius: 12,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
   },
-  stepInfo: {
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  stepLabel: {
-    color: Colors.ink,
-    fontSize: 20,
-    fontWeight: '600',
+  imagePlaceholderIcon: {
+    fontSize: 48,
     marginBottom: 8,
   },
-  stepNote: {
+  imagePlaceholderText: {
+    color: Colors.inkMute,
+    fontSize: 14,
+  },
+
+  /* 路线点信息 */
+  info: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  label: {
+    color: Colors.ink,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  note: {
     color: Colors.inkLight,
     fontSize: 16,
+    fontStyle: 'italic',
     lineHeight: 24,
+    marginBottom: 8,
   },
-  stepButtons: {
+  distance: {
+    color: Colors.inkMute,
+    fontSize: 14,
+  },
+
+  /* 到达提示 */
+  arrivalBanner: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  arrivalEmoji: {
+    fontSize: 36,
+    marginBottom: 4,
+  },
+  arrivalText: {
+    color: Colors.vermilion,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  /* 底部箭头按钮 */
+  navRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
     marginTop: 'auto',
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  stepBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 26,
+  arrowBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 1.5,
     borderColor: Colors.divider,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBtnDisabled: {
-    opacity: 0.4,
+  arrowBtnDisabled: {
+    opacity: 0.3,
   },
-  stepBtnText: {
+  arrowText: {
+    fontSize: 24,
     color: Colors.ink,
-    fontSize: 15,
-    fontWeight: '500',
   },
-  stepBtnTextDisabled: {
+  arrowTextDisabled: {
     color: Colors.inkMute,
   },
-  stepBtnPrimary: {
+  arrowBtnPrimary: {
     flex: 1,
-    height: 52,
-    borderRadius: 26,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Colors.vermilion,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBtnPrimaryText: {
+  arrowPrimaryText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
 });
