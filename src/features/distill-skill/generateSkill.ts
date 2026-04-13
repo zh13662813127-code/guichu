@@ -1,169 +1,154 @@
 /**
- * .skill 文件生成器
- * 拼接 prompt，调用 LLM 流式生成 .skill 格式的 Markdown
- *
- * 支持两种输入模式：
- * 1. 素材模式（推荐）：聊天记录、口述回忆、其他素材
- * 2. 问答模式（兼容旧版）：Q&A 问答列表
+ * .skill 文件生成器 — v2 双轨蒸馏
+ * 基于 yourself-skill 理念，生成 Part A（记忆档案）+ Part B（5 层人格结构）
  *
  * 注意：openai SDK 使用动态导入，避免 App 启动时加载导致 RN 兼容性错误
  */
 
-/** 系统 prompt：素材模式 — 从日常痕迹中提取人格 */
-const SYSTEM_PROMPT_MATERIALS = `你正在为用户蒸馏一位长辈的"数字人格档案"。
-用户会提供以下素材（可能不完整，有什么用什么）：
-1. 聊天记录：长辈与他人的对话记录
-2. 口述回忆：用户对长辈的记忆描述
-3. 其他素材：信件、日记、别人的评价等
+/** 系统 prompt：双轨蒸馏 v2 */
+const SYSTEM_PROMPT_V2 = `你正在为用户蒸馏一位已故长辈的"数字人格档案"。
 
-请从这些素材中提取人格特征，输出 .skill 文件。格式：
+请基于提供的素材，生成以下两部分内容：
 
+## Part A — 记忆档案
+从素材中提取：
+- 基本身份（籍贯、职业、时代背景）
+- 核心人生记忆（按时间排列，5-10 个关键事件）
+- 人际关系图谱（和谁关系好、和谁有矛盾）
+- 价值观与处世哲学
+- 生活习惯与爱好
+
+## Part B — 5 层人格结构
+
+### Layer 1: 硬规则
+- 绝对不会做的事
+- 绝对不会说的话
+- 禁忌话题
+
+### Layer 2: 身份认同
+- "我是谁"的核心认知
+- 最引以为豪的身份
+
+### Layer 3: 说话风格
+- 口头禅（原文保留方言）
+- 常用句式
+- 语气特征（温和/严厉/幽默/沉默...）
+- 方言特征
+
+### Layer 4: 情感模式
+- 开心时的表现
+- 生气时的表现
+- 难过时的表现
+- 安慰人的方式
+
+### Layer 5: 人际行为
+- 对晚辈的态度
+- 对陌生人的态度
+- 社交偏好
+
+输出格式为 Markdown，用 YAML frontmatter：
 ---
 name: {名字}
 description: 一句话描述
+version: 1
+method: guichu-distill-v2
 ---
 
-# 身份
-（基本背景信息，包括出生年份、籍贯、职业等）
-
-# 说话风格
-- 列出口头禅、方言特征、典型句式
-
-# 核心记忆
-- 列出最重要的 5-8 个人生记忆，每个用一两句话概括
-
-# 价值观
-- 列出 3-5 个核心价值观，用长辈自己的话来表述
-
-# 禁忌
-- 素材中暗示不愿提及或回避的话题
-
-特别注意：
-1. 从聊天记录中提取说话风格、口头禅、语气
-2. 从回忆中提取核心记忆和价值观
-3. 保留原话中的方言和口语特征
-4. 不要编造素材中没有的内容
-
-要求：
-1. 用第二人称写（"你是..."），因为这会被用作 AI 对话的 system prompt
-2. 保留原话中的方言特征和口头禅
-3. 不要编造素材中没提到的内容
-4. 语气温暖但克制，不要过度煽情
-5. 如果某些信息素材中未提及，就跳过对应部分，不要瞎编`;
-
-/** 系统 prompt：问答模式（兼容旧版） */
-const SYSTEM_PROMPT_QA = `你正在为用户整理一位长辈的"数字人格档案"。
-基于以下访谈记录，输出一份 .skill 文件。格式必须是：
-
----
-name: {名字}
-description: 一句话描述
----
-
-# 身份
-（基本背景信息，包括出生年份、籍贯、职业等）
-
-# 说话风格
-- 列出口头禅、方言特征、典型句式
-
-# 核心记忆
-- 列出最重要的 5-8 个人生记忆，每个用一两句话概括
-
-# 价值观
-- 列出 3-5 个核心价值观，用长辈自己的话来表述
-
-# 禁忌
-- 访谈中暗示不愿提及或回避的话题
-
-要求：
-1. 用第二人称写（"你是..."），因为这会被用作 AI 对话的 system prompt
-2. 保留原话中的方言特征和口头禅
-3. 不要编造访谈中没提到的内容
-4. 语气温暖但克制，不要过度煽情
-5. 如果某些信息访谈中未提及，就跳过对应部分，不要瞎编`;
+用第二人称写（"你是..."），因为这会被用作 AI 对话的 system prompt。
+保留所有方言和口语特征。不要编造素材中没有的内容。
+如果某些信息素材中未提及，就跳过对应部分，不要瞎编。
+语气温暖但克制，不要过度煽情。`;
 
 /**
- * 构建素材模式的用户消息
+ * 构建用户消息（新版引导式数据结构）
  */
-function buildMaterialsMessage(params: {
+function buildUserMessage(params: {
   name: string;
   relationship?: string;
-  birthYear?: number;
-  deathYear?: number;
+  oneLiner: string;
+  catchphrases?: string;
+  hometown?: string;
+  occupation?: string;
+  lifeStories?: string;
+  proudest?: string;
+  biggestRegret?: string;
   chatLogs?: string;
-  memories?: string;
   otherMaterials?: string;
 }): string {
-  const { name, relationship, birthYear, deathYear, chatLogs, memories, otherMaterials } = params;
+  const {
+    name, relationship, oneLiner, catchphrases,
+    hometown, occupation, lifeStories, proudest,
+    biggestRegret, chatLogs, otherMaterials,
+  } = params;
 
-  let header = `长辈姓名：${name}`;
-  if (relationship) header += `\n与用户关系：${relationship}`;
-  if (birthYear) header += `\n出生年份：${birthYear}`;
-  if (deathYear) header += `\n去世年份：${deathYear}`;
+  const lines: string[] = [];
 
-  const sections: string[] = [];
+  // 基本信息
+  lines.push(`长辈姓名：${name}`);
+  if (relationship) lines.push(`与用户关系：${relationship}`);
+  lines.push(`一句话描述：${oneLiner}`);
+  if (hometown) lines.push(`籍贯/口音：${hometown}`);
+  if (occupation) lines.push(`职业/一辈子做什么：${occupation}`);
 
-  if (chatLogs) {
-    sections.push(`--- 聊天记录 ---\n\n${chatLogs}`);
+  // 口头禅
+  if (catchphrases?.trim()) {
+    lines.push('');
+    lines.push('--- 口头禅 ---');
+    lines.push(catchphrases.trim());
   }
-  if (memories) {
-    sections.push(`--- 口述回忆 ---\n\n${memories}`);
-  }
-  if (otherMaterials) {
-    sections.push(`--- 其他素材 ---\n\n${otherMaterials}`);
+
+  // 核心记忆
+  const memoryParts: string[] = [];
+  if (lifeStories?.trim()) memoryParts.push(lifeStories.trim());
+  if (proudest?.trim()) memoryParts.push(`最骄傲的事：${proudest.trim()}`);
+  if (biggestRegret?.trim()) memoryParts.push(`最大的遗憾：${biggestRegret.trim()}`);
+
+  if (memoryParts.length > 0) {
+    lines.push('');
+    lines.push('--- 核心记忆 ---');
+    lines.push(memoryParts.join('\n\n'));
   }
 
-  return `${header}\n\n${sections.join('\n\n')}`;
+  // 素材补充
+  if (chatLogs?.trim()) {
+    lines.push('');
+    lines.push('--- 聊天记录 ---');
+    lines.push(chatLogs.trim());
+  }
+  if (otherMaterials?.trim()) {
+    lines.push('');
+    lines.push('--- 其他素材（信件、日记、评价等） ---');
+    lines.push(otherMaterials.trim());
+  }
+
+  return lines.join('\n');
 }
 
 /**
- * 构建问答模式的用户消息（兼容旧版）
- */
-function buildQAMessage(params: {
-  name: string;
-  relationship?: string;
-  birthYear?: number;
-  deathYear?: number;
-  answers: Array<{ question: string; answer: string }>;
-}): string {
-  const { name, relationship, birthYear, deathYear, answers } = params;
-
-  let header = `长辈姓名：${name}`;
-  if (relationship) header += `\n与用户关系：${relationship}`;
-  if (birthYear) header += `\n出生年份：${birthYear}`;
-  if (deathYear) header += `\n去世年份：${deathYear}`;
-
-  const qaPairs = answers
-    .filter((a) => a.answer.trim().length > 0)
-    .map((a, i) => `【问题 ${i + 1}】${a.question}\n【回答】${a.answer}`)
-    .join('\n\n');
-
-  return `${header}\n\n--- 访谈记录 ---\n\n${qaPairs}`;
-}
-
-/**
- * 调用 LLM 流式生成 .skill 文件
+ * 调用 LLM 流式生成 .skill 文件（v2 双轨蒸馏）
  *
- * 支持素材模式和问答模式，自动判断使用哪种 prompt。
  * openai SDK 在此处动态导入，仅在用户实际触发蒸馏时才加载。
  */
 export async function generateSkillFile(params: {
   name: string;
   relationship?: string;
-  birthYear?: number;
-  deathYear?: number;
-  /** 素材模式：聊天记录 */
-  chatLogs?: string;
-  /** 素材模式：口述回忆 */
-  memories?: string;
-  /** 素材模式：其他素材 */
-  otherMaterials?: string;
-  /** 问答模式（兼容旧版） */
-  answers?: Array<{ question: string; answer: string }>;
+  // 步骤 1：基本画像
+  oneLiner: string;           // 一句话描述（必填）
+  catchphrases?: string;       // 口头禅
+  hometown?: string;           // 哪里人/口音
+  occupation?: string;         // 职业
+  // 步骤 2：核心记忆
+  lifeStories?: string;        // 重要经历
+  proudest?: string;           // 最骄傲的事
+  biggestRegret?: string;      // 最大遗憾
+  // 步骤 3：素材补充
+  chatLogs?: string;           // 聊天记录
+  otherMaterials?: string;     // 其他素材
+  // LLM 配置
   llmConfig: { baseURL: string; apiKey: string; model: string };
   onProgress?: (text: string) => void;
 }): Promise<string> {
-  const { llmConfig, onProgress, answers, chatLogs, memories, otherMaterials, ...basicInfo } = params;
+  const { llmConfig, onProgress, ...contentParams } = params;
 
   // 动态导入 openai SDK，避免启动时加载
   const { default: OpenAI } = await import('openai');
@@ -174,18 +159,12 @@ export async function generateSkillFile(params: {
     dangerouslyAllowBrowser: true,
   });
 
-  // 判断使用哪种模式
-  const isMaterialsMode = !!(chatLogs || memories || otherMaterials);
-
-  const systemPrompt = isMaterialsMode ? SYSTEM_PROMPT_MATERIALS : SYSTEM_PROMPT_QA;
-  const userMessage = isMaterialsMode
-    ? buildMaterialsMessage({ ...basicInfo, chatLogs, memories, otherMaterials })
-    : buildQAMessage({ ...basicInfo, answers: answers || [] });
+  const userMessage = buildUserMessage(contentParams);
 
   const stream = await client.chat.completions.create({
     model: llmConfig.model,
     messages: [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: SYSTEM_PROMPT_V2 },
       { role: 'user', content: userMessage },
     ],
     stream: true,

@@ -57,8 +57,8 @@ export default function ConfirmLocationScreen() {
   // --- 关联长辈 ---
   const [selectedAncestorId, setSelectedAncestorId] = useState<string | null>(id || null);
 
-  // 判断是否可保存：有 GPS 定位 或 有手动地址
-  const canSave = !!(location || manualAddress.trim());
+  // 判断是否可保存：有 GPS 定位 或 有手动地址 或 有补充描述
+  const canSave = !!(location || manualAddress.trim() || addressDetail.trim());
 
   const handlePickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true });
@@ -260,14 +260,9 @@ export default function ConfirmLocationScreen() {
         </View>
       </View>
 
-      {/* 保存 — GPS 定位或手动地址，有一个即可 */}
+      {/* 保存 — 始终可点击，保存时检查 */}
       <View style={st.saveArea}>
-        <PrimaryButton title="保存" onPress={handleSave} disabled={!canSave} />
-        {!canSave && (
-          <Text style={st.saveHint}>
-            {mode === 'gps' ? '请先完成 GPS 定位' : '请输入墓地地址'}
-          </Text>
-        )}
+        <PrimaryButton title="保存" onPress={handleSave} />
       </View>
 
       {/* 提示：skill 在哪 */}

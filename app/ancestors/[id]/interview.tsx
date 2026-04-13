@@ -204,15 +204,16 @@ export default function InterviewScreen() {
         return;
       }
 
+      // 将问答格式转为新版素材格式
+      const qaText = validAnswers
+        .map((a) => `【问】${a.question}\n【答】${a.answer}`)
+        .join('\n\n');
+
       const result = await generateSkillFile({
         name: ancestor?.name || '长辈',
         relationship: ancestor?.relationship || undefined,
-        birthYear: ancestor?.birth_year || undefined,
-        deathYear: ancestor?.death_year || undefined,
-        answers: validAnswers.map((a) => ({
-          question: a.question,
-          answer: a.answer,
-        })),
+        oneLiner: validAnswers[0]?.answer?.slice(0, 100) || '长辈',
+        otherMaterials: qaText,
         llmConfig: config,
         onProgress: (chunk) => {
           setDistillText((prev) => prev + chunk);
