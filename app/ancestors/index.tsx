@@ -7,6 +7,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   Pressable,
   StyleSheet,
@@ -75,8 +76,15 @@ export default function AncestorsScreen() {
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         onPress={() => router.push(`/ancestors/${ancestor.id}` as any)}
       >
-        {/* 左：头像 */}
-        <AvatarCircle name={ancestor.name} size={56} />
+        {/* 左：头像，有 avatar_path 显示真实头像 */}
+        {ancestor.avatar_path ? (
+          <Image
+            source={{ uri: ancestor.avatar_path }}
+            style={{ width: 56, height: 56, borderRadius: 28 }}
+          />
+        ) : (
+          <AvatarCircle name={ancestor.name} size={56} />
+        )}
 
         {/* 中：基本信息 */}
         <View style={styles.cardInfo}>

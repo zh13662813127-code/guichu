@@ -299,8 +299,14 @@ export default function ChatScreen() {
               <Text style={styles.welcomeText}>
                 和{ancestor.name}聊聊吧
               </Text>
+              {/* 用长辈说话风格模拟一句欢迎语 */}
+              <Text style={styles.welcomeQuote}>
+                {ancestor.gender === 'female'
+                  ? `"来啦？坐坐坐，${ancestor.name}给你讲讲以前的事儿。"`
+                  : `"哟，来了啊，坐下聊聊，${ancestor.name}跟你说说过去的事。"`}
+              </Text>
               <Text style={styles.welcomeHint}>
-                试着问一些他/她可能知道的事情
+                试着问一些{ancestor.gender === 'female' ? '她' : '他'}可能知道的事情
               </Text>
             </View>
           }
@@ -407,6 +413,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  welcomeQuote: {
+    color: Colors.inkLight,
+    fontSize: 16,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   welcomeHint: {
     color: Colors.inkMute,

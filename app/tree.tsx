@@ -1,13 +1,14 @@
 /**
  * 族谱树可视化页面
  * 纯 React Native View 实现，按 generation 分层排列
- * 支持纵向 + 横向滚动
+ * 支持纵向 + 横向滚动，带连接线
  */
 
 import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -19,31 +20,22 @@ import { useAncestorStore, type Ancestor } from '../src/stores/ancestorStore';
 import { AvatarCircle } from '../src/components/AvatarCircle';
 import { PrimaryButton } from '../src/components/PrimaryButton';
 
-/** 根据性别决定节点卡片圆角 */
-function getNodeBorderRadius(gender: Ancestor['gender']): number {
-  switch (gender) {
-    case 'male':
-      return 8; // rounded-md
-    case 'female':
-      return 999; // rounded-full（圆形）
-    default:
-      return 16; // rounded-lg（八边形近似）
-  }
-}
+// ─── 常量 ───────────────────────────────────────────
+const NODE_WIDTH = 96;
+const NODE_GAP = 16;
+const CONNECTOR_HEIGHT = 36;
+const AVATAR_SIZE = 48;
 
 /** 判断是否已离世 */
 function isDeceased(a: Ancestor): boolean {
   return a.death_year != null || a.death_date != null;
 }
 
-/**
- * 单个节点组件
- */
+// ─── 单个节点组件 ───────────────────────────────────
+
 function TreeNode({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => void }) {
-  const borderRadius = getNodeBorderRadius(ancestor.gender);
   const deceased = isDeceased(ancestor);
   const hasSkill = !!ancestor.skill_content;
-  const hasVoice = !!ancestor.voice_id;
 
   return (
     <Pressable
@@ -51,7 +43,6 @@ function TreeNode({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => vo
       style={({ pressed }) => [
         styles.nodeCard,
         {
-          borderRadius,
           borderStyle: deceased ? 'dashed' : 'solid',
           opacity: pressed ? 0.7 : 1,
         },
@@ -59,14 +50,17 @@ function TreeNode({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => vo
     >
       {/* 右上角：skill 绿点 */}
       {hasSkill && <View style={styles.skillDot} />}
-      {/* 右下角：voice 喇叭 */}
-      {hasVoice && (
-        <View style={styles.voiceBadge}>
-          <Text style={styles.voiceIcon}>🔊</Text>
-        </View>
+
+      {/* 头像：有 avatar_path 用真实图片，否则用首字母 */}
+      {ancestor.avatar_path ? (
+        <Image
+          source={{ uri: ancestor.avatar_path }}
+          style={styles.avatarImage}
+        />
+      ) : (
+        <AvatarCircle name={ancestor.name} size={AVATAR_SIZE} />
       )}
 
-      <AvatarCircle name={ancestor.name} size={40} />
       <Text style={styles.nodeName} numberOfLines={1}>
         {ancestor.name}
       </Text>
@@ -79,16 +73,85 @@ function TreeNode({ ancestor, onPress }: { ancestor: Ancestor; onPress: () => vo
   );
 }
 
-/**
- * 层间竖线连接组件
- */
-function ConnectorLine() {
+// ─── 层间连接线组件 ─────────────────────────────────
+// 在两层之间绘制：先画一条竖线到中间横线高度，横线覆盖下层所有节点宽度，
+// 再从横线下方分出竖线到每个下层节点上方
+
+interface ConnectorProps {
+  /** 上层节点数 */
+  topCount: number;
+  /** 下层节点数 */
+  bottomCount: number;
+}
+
+function LayerConnector({ topCount, bottomCount }: ConnectorProps) {
+  // 计算上层和下层各自的总宽度（含间距）
+  const topWidth = topCount * NODE_WIDTH + (topCount - 1) * NODE_GAP;
+  const bottomWidth = bottomCount * NODE_WIDTH + (bottomCount - 1) * NODE_GAP;
+  const totalWidth = Math.max(topWidth, bottomWidth);
+
+  // 上层中心 x 坐标
+  const topOffsetX = (totalWidth - topWidth) / 2;
+  // 下层中心 x 坐标
+  const bottomOffsetX = (totalWidth - bottomWidth) / 2;
+
+  // 上层所有节点的中心 x
+  const topCenters: number[] = [];
+  for (let i = 0; i < topCount; i++) {
+    topCenters.push(topOffsetX + i * (NODE_WIDTH + NODE_GAP) + NODE_WIDTH / 2);
+  }
+
+  // 下层所有节点的中心 x
+  const bottomCenters: number[] = [];
+  for (let i = 0; i < bottomCount; i++) {
+    bottomCenters.push(bottomOffsetX + i * (NODE_WIDTH + NODE_GAP) + NODE_WIDTH / 2);
+  }
+
+  // 横线覆盖范围：从最左 center 到最右 center（合并上下层）
+  const allCenters = [...topCenters, ...bottomCenters];
+  const lineLeft = Math.min(...allCenters);
+  const lineRight = Math.max(...allCenters);
+
+  const halfH = CONNECTOR_HEIGHT / 2;
+
   return (
-    <View style={styles.connectorContainer}>
-      <View style={styles.connectorLine} />
+    <View style={[styles.connectorArea, { width: totalWidth, height: CONNECTOR_HEIGHT }]}>
+      {/* 从上层每个节点中心向下画竖线到中间横线 */}
+      {topCenters.map((cx, idx) => (
+        <View
+          key={`tv-${idx}`}
+          style={[
+            styles.vLine,
+            { left: cx - 1, top: 0, height: halfH },
+          ]}
+        />
+      ))}
+
+      {/* 中间横线 */}
+      {lineLeft < lineRight && (
+        <View
+          style={[
+            styles.hLine,
+            { left: lineLeft, top: halfH - 1, width: lineRight - lineLeft },
+          ]}
+        />
+      )}
+
+      {/* 从中间横线向下画竖线到下层每个节点 */}
+      {bottomCenters.map((cx, idx) => (
+        <View
+          key={`bv-${idx}`}
+          style={[
+            styles.vLine,
+            { left: cx - 1, top: halfH, height: halfH },
+          ]}
+        />
+      ))}
     </View>
   );
 }
+
+// ─── 主页面组件 ─────────────────────────────────────
 
 export default function TreeScreen() {
   const router = useRouter();
@@ -102,7 +165,6 @@ export default function TreeScreen() {
   const layers = useMemo(() => {
     if (ancestors.length === 0) return [];
 
-    // 收集所有 generation 值并降序排列
     const genSet = new Set(ancestors.map((a) => a.generation));
     const sortedGens = Array.from(genSet).sort((a, b) => b - a);
 
@@ -112,7 +174,7 @@ export default function TreeScreen() {
     }));
   }, [ancestors]);
 
-  /** 空状态 */
+  // 空状态
   if (!isLoading && ancestors.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -160,9 +222,11 @@ export default function TreeScreen() {
               <React.Fragment key={layer.generation}>
                 {/* 层标题 */}
                 <View style={styles.layerHeader}>
-                  <Text style={styles.layerLabel}>
-                    第 {layer.generation} 代
-                  </Text>
+                  <View style={styles.layerBadge}>
+                    <Text style={styles.layerLabel}>
+                      第 {layer.generation} 代
+                    </Text>
+                  </View>
                 </View>
 
                 {/* 该层节点水平排列 */}
@@ -179,7 +243,12 @@ export default function TreeScreen() {
                 </View>
 
                 {/* 层间连接线（最后一层不画） */}
-                {layerIdx < layers.length - 1 && <ConnectorLine />}
+                {layerIdx < layers.length - 1 && (
+                  <LayerConnector
+                    topCount={layer.members.length}
+                    bottomCount={layers[layerIdx + 1].members.length}
+                  />
+                )}
               </React.Fragment>
             ))}
           </View>
@@ -196,6 +265,8 @@ export default function TreeScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── 样式 ─────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -236,6 +307,13 @@ const styles = StyleSheet.create({
   // 层标题
   layerHeader: {
     marginBottom: 8,
+    alignItems: 'center',
+  },
+  layerBadge: {
+    backgroundColor: Colors.paperDark,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   layerLabel: {
     color: Colors.inkMute,
@@ -248,18 +326,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'nowrap',
-    gap: 12,
+    gap: NODE_GAP,
   },
 
   // 节点卡片
   nodeCard: {
-    width: 90,
+    width: NODE_WIDTH,
     paddingVertical: 10,
     paddingHorizontal: 6,
     alignItems: 'center',
     backgroundColor: Colors.paperDark,
     borderWidth: 1.5,
     borderColor: Colors.divider,
+    borderRadius: 12,
     position: 'relative',
   },
   nodeName: {
@@ -276,6 +355,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // 头像图片
+  avatarImage: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
+
   // skill 绿点（右上角）
   skillDot: {
     position: 'absolute',
@@ -287,25 +373,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.jade,
   },
 
-  // voice 喇叭（右下角）
-  voiceBadge: {
+  // 连接线区域（绝对定位的子元素）
+  connectorArea: {
+    position: 'relative',
+    alignSelf: 'center',
+  },
+  // 竖线
+  vLine: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-  },
-  voiceIcon: {
-    fontSize: 10,
-  },
-
-  // 层间连接线
-  connectorContainer: {
-    alignItems: 'center',
-    height: 28,
-    justifyContent: 'center',
-  },
-  connectorLine: {
     width: 2,
-    height: 28,
+    backgroundColor: Colors.divider,
+  },
+  // 横线
+  hLine: {
+    position: 'absolute',
+    height: 2,
     backgroundColor: Colors.divider,
   },
 

@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -286,7 +287,15 @@ export default function HomeScreen() {
                         style={({ pressed }) => [styles.ancestorRowCard, pressed && { opacity: 0.85 }]}
                         onPress={() => router.push(`/ancestors/${ancestor.id}` as any)}
                       >
-                        <AvatarCircle name={ancestor.name} size={48} />
+                        {/* 头像：有 avatar_path 显示真实头像，否则显示首字母 */}
+                        {ancestor.avatar_path ? (
+                          <Image
+                            source={{ uri: ancestor.avatar_path }}
+                            style={{ width: 48, height: 48, borderRadius: 24 }}
+                          />
+                        ) : (
+                          <AvatarCircle name={ancestor.name} size={48} />
+                        )}
                         <View style={styles.ancestorRowInfo}>
                           <View style={styles.ancestorRowTop}>
                             {ancestor.relationship && (

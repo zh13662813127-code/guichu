@@ -1,12 +1,24 @@
 /**
  * 设置首页
- * 包含 LLM 配置、语音引擎、地图、地区、提醒、数据、关于等入口
+ * 包含 LLM 配置、语音引擎、地图、地区、提醒、数据导入导出、关于等入口
  */
 
-import { View, Text, Pressable, ScrollView, Alert, Linking, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  Alert,
+  Linking,
+  Modal,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
+import { useAncestorStore } from '../../src/stores/ancestorStore';
+import { exportAncestorsData } from '../../src/utils/exportData';
 
 /** 设置项数据 */
 interface SettingItem {
@@ -21,22 +33,33 @@ function alertWIP(feature: string) {
   Alert.alert('开发中', `${feature}功能正在开发中，敬请期待`);
 }
 
-/** 关于弹窗 */
-function showAbout() {
-  Alert.alert(
-    '关于归处',
-    '版本：0.1.0 MVP\n' +
-      '协议：MIT License\n\n' +
-      '一个帮你记住家人故事的 App',
-    [
-      { text: '访问 GitHub', onPress: () => Linking.openURL('https://github.com/') },
-      { text: '知道了', style: 'cancel' },
-    ]
-  );
-}
-
 export default function SettingsScreen() {
   const router = useRouter();
+  const ancestors = useAncestorStore((s) => s.ancestors);
+
+  // 关于弹窗状态
+  const [aboutVisible, setAboutVisible] = useState(false);
+
+  /** 数据导入导出 — 弹出选项 */
+  function handleDataExportImport() {
+    Alert.alert('数据导入导出', '选择操作', [
+      {
+        text: '导出所有数据',
+        onPress: async () => {
+          try {
+            await exportAncestorsData(ancestors);
+          } catch (e: any) {
+            Alert.alert('导出失败', e?.message || '未知错误');
+          }
+        },
+      },
+      {
+        text: '导入数据',
+        onPress: () => alertWIP('数据导入'),
+      },
+      { text: '取消', style: 'cancel' },
+    ]);
+  }
 
   const items: SettingItem[] = [
     {
@@ -73,13 +96,13 @@ export default function SettingsScreen() {
       icon: '📦',
       label: '数据导入导出',
       hint: '备份或迁移你的数据',
-      onPress: () => alertWIP('数据导入导出'),
+      onPress: handleDataExportImport,
     },
     {
       icon: 'ℹ️',
       label: '关于',
       hint: '版本信息、开源协议',
-      onPress: showAbout,
+      onPress: () => setAboutVisible(true),
     },
   ];
 
@@ -107,6 +130,41 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      {/* ─── 关于弹窗 ────────────────────────────── */}
+      <Modal
+        visible={aboutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.aboutAppName}>归处 Guichu</Text>
+            <Text style={styles.aboutVersion}>v0.1.0</Text>
+            <Text style={styles.aboutDesc}>开源电子族谱</Text>
+            <Text style={styles.aboutQuote}>
+              "在你还来得及的时候，把他们留下来。"
+            </Text>
+            <Text style={styles.aboutLicense}>MIT License</Text>
+            <Pressable
+              onPress={() =>
+                Linking.openURL('https://github.com/zh13662813127-code/guichu')
+              }
+            >
+              <Text style={styles.aboutLink}>
+                GitHub: zh13662813127-code/guichu
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.aboutCloseBtn}
+              onPress={() => setAboutVisible(false)}
+            >
+              <Text style={styles.aboutCloseBtnText}>知道了</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -159,5 +217,76 @@ const styles = StyleSheet.create({
     color: Colors.inkMute,
     fontSize: 22,
     fontWeight: '300',
+  },
+
+  // ─── 关于弹窗样式 ────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCard: {
+    backgroundColor: Colors.paper,
+    borderRadius: 16,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 340,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  aboutAppName: {
+    color: Colors.ink,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  aboutVersion: {
+    color: Colors.inkLight,
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  aboutDesc: {
+    color: Colors.ink,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  aboutQuote: {
+    color: Colors.inkLight,
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  aboutLicense: {
+    color: Colors.inkMute,
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  aboutLink: {
+    color: Colors.vermilion,
+    fontSize: 13,
+    textDecorationLine: 'underline',
+    marginBottom: 20,
+  },
+  aboutCloseBtn: {
+    height: 40,
+    paddingHorizontal: 32,
+    backgroundColor: Colors.vermilion,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutCloseBtnText: {
+    color: Colors.paper,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
