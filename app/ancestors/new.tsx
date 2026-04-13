@@ -250,6 +250,7 @@ export default function NewAncestorScreen() {
   const [deathDay, setDeathDay] = useState<number | undefined>();
   const [showDeathPicker, setShowDeathPicker] = useState(false);
 
+  const [honor, setHonor] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const finalRelationship = isOtherRelationship ? customRelationship : relationship;
@@ -267,6 +268,7 @@ export default function NewAncestorScreen() {
         birthYear,
         deathYear,
         deathDate: deathYear ? toDateString(deathYear, deathMonth, deathDay) : undefined,
+        honor: honor.trim() || undefined,
       });
       router.back();
     } catch (e) {
@@ -392,6 +394,19 @@ export default function NewAncestorScreen() {
             </Pressable>
           )}
           <Text style={styles.hint}>填写后将自动生成习俗提醒日历</Text>
+        </View>
+
+        {/* 荣誉展示 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>荣誉 / 头衔</Text>
+          <TextInput
+            style={styles.input}
+            value={honor}
+            onChangeText={setHonor}
+            placeholder="如：抗美援朝老兵、高级教师、村支书..."
+            placeholderTextColor={Colors.inkMute}
+          />
+          <Text style={styles.hint}>可选，会在长辈卡片上展示</Text>
         </View>
       </ScrollView>
 

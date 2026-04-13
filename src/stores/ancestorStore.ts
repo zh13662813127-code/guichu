@@ -23,6 +23,7 @@ interface Ancestor {
   skill_content: string | null;
   voice_id: string | null;
   voice_engine: string | null;
+  honor: string | null;
   parent_id: string | null;
   spouse_id: string | null;
   generation: number;
@@ -43,6 +44,7 @@ interface AncestorStore {
     birthYear?: number;
     deathYear?: number;
     deathDate?: string;
+    honor?: string;
   }) => Promise<string>;
   removeAncestor: (id: string) => Promise<void>;
   /** 更新长辈的 .skill 人格档案内容 */
@@ -101,6 +103,7 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
         skill_content: null,
         voice_id: null,
         voice_engine: null,
+        honor: data.honor ?? null,
         parent_id: null,
         spouse_id: null,
         generation: 1,

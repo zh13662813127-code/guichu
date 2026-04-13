@@ -248,7 +248,7 @@ export default function HomeScreen() {
               ))}
             </View>
 
-            {/* ── 区域 C：我的长辈 ── */}
+            {/* ── 区域 C：我的长辈（纵向卡片列表） ── */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>我的长辈</Text>
               <Pressable
@@ -260,61 +260,84 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            {/* 用 View 替代横向 ScrollView，避免 Web 端 Pressable 事件被吞 */}
-            <View style={styles.ancestorListRow}>
+            <View style={styles.ancestorList}>
               {hasAncestors ? (
                 <>
-                  {ancestors.map((ancestor) => (
-                    <Pressable
-                      key={ancestor.id}
-                      style={({ pressed }) => [
-                        styles.ancestorCard,
-                        pressed && styles.ancestorCardPressed,
-                      ]}
-                      onPress={() =>
-                        router.push(`/ancestors/${ancestor.id}` as any)
-                      }
-                    >
-                      <AvatarCircle name={ancestor.name} size={60} />
-                      <Text style={styles.ancestorCardName} numberOfLines={1}>
-                        {ancestor.name}
-                      </Text>
-                      {ancestor.relationship ? (
-                        <Text style={styles.ancestorCardRelation} numberOfLines={1}>
-                          {ancestor.relationship}
-                        </Text>
-                      ) : null}
-                    </Pressable>
-                  ))}
-                  {/* 添加卡片 */}
+                  {ancestors.map((ancestor) => {
+                    // 计算享年
+                    let ageText = '';
+                    if (ancestor.birth_year && (ancestor.death_year || ancestor.death_date)) {
+                      const deathY = ancestor.death_year || (ancestor.death_date ? parseInt(ancestor.death_date.split('-')[0]) : 0);
+                      if (deathY) ageText = `享年 ${deathY - ancestor.birth_year} 岁`;
+                    }
+                    // 计算下一个节日
+                    let nextRitual: { name: string; daysFromNow: number } | null = null;
+                    if (ancestor.death_date) {
+                      try {
+                        const events = calculateRituals(ancestor.death_date);
+                        const upcoming = events.filter(e => !e.isPast);
+                        if (upcoming.length > 0) nextRitual = { name: upcoming[0].name, daysFromNow: upcoming[0].daysFromNow };
+                      } catch {}
+                    }
+
+                    return (
+                      <Pressable
+                        key={ancestor.id}
+                        style={({ pressed }) => [styles.ancestorRowCard, pressed && { opacity: 0.85 }]}
+                        onPress={() => router.push(`/ancestors/${ancestor.id}` as any)}
+                      >
+                        <AvatarCircle name={ancestor.name} size={48} />
+                        <View style={styles.ancestorRowInfo}>
+                          <View style={styles.ancestorRowTop}>
+                            {ancestor.relationship && (
+                              <Text style={styles.ancestorRowRelTag}>{ancestor.relationship}</Text>
+                            )}
+                            <Text style={styles.ancestorRowName}>{ancestor.name}</Text>
+                          </View>
+                          {ageText ? (
+                            <Text style={styles.ancestorRowAge}>{ageText}</Text>
+                          ) : (
+                            <Text style={styles.ancestorRowAge}>
+                              {ancestor.birth_year ? `${ancestor.birth_year}年生` : ''}
+                              {!ancestor.death_date ? ' · 健在' : ''}
+                            </Text>
+                          )}
+                          {ancestor.honor && (
+                            <Text style={styles.ancestorRowHonor} numberOfLines={1}>
+                              {ancestor.honor}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.ancestorRowRight}>
+                          {nextRitual ? (
+                            <>
+                              <Text style={styles.ancestorRowRitual} numberOfLines={1}>{nextRitual.name}</Text>
+                              <Text style={styles.ancestorRowCountdown}>
+                                {nextRitual.daysFromNow === 0 ? '今天' : `${nextRitual.daysFromNow}天后`}
+                              </Text>
+                            </>
+                          ) : null}
+                          <ChevronRight color={Colors.inkMute} size={16} />
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                  {/* 添加更多 */}
                   <Pressable
-                    style={({ pressed }) => [
-                      styles.ancestorCard,
-                      styles.addAncestorCard,
-                      pressed && styles.ancestorCardPressed,
-                    ]}
+                    style={({ pressed }) => [styles.addMoreCard, pressed && { opacity: 0.8 }]}
                     onPress={() => router.push('/ancestors/new' as any)}
                   >
-                    <View style={styles.addAncestorCircle}>
-                      <Plus color={Colors.inkMute} size={24} />
-                    </View>
-                    <Text style={styles.addAncestorText}>添加</Text>
+                    <Plus color={Colors.inkMute} size={18} />
+                    <Text style={styles.addMoreText}>添加更多长辈</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable
-                  style={styles.emptyAncestorCard}
+                  style={({ pressed }) => [styles.emptyAncestorCard, pressed && { opacity: 0.8 }]}
                   onPress={() => router.push('/ancestors/new' as any)}
                 >
-                  <View style={styles.addAncestorCircle}>
-                    <Plus color={Colors.inkMute} size={28} />
-                  </View>
-                  <Text style={styles.emptyAncestorTitle}>
-                    添加你的第一位家人
-                  </Text>
-                  <Text style={styles.emptyAncestorHint}>
-                    记录他们的故事，留住珍贵的记忆
-                  </Text>
+                  <Text style={styles.emptyAncestorTitle}>添加你的第一位家人</Text>
+                  <Text style={styles.emptyAncestorHint}>记录他们的故事，留住珍贵的记忆</Text>
                 </Pressable>
               )}
             </View>
@@ -586,54 +609,85 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // 区域 C：我的长辈（普通 View 行布局，Web 端兼容）
-  ancestorListRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  // 区域 C：我的长辈（纵向卡片列表）
+  ancestorList: {
     paddingHorizontal: 20,
-    gap: 12,
   },
-  ancestorCard: {
+  ancestorRowCard: {
+    backgroundColor: Colors.paperDark,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    width: 80,
   },
-  ancestorCardPressed: {
-    opacity: 0.7,
+  ancestorRowInfo: {
+    flex: 1,
+    marginLeft: 12,
   },
-  ancestorCardName: {
+  ancestorRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  ancestorRowRelTag: {
+    color: Colors.paper,
+    fontSize: 11,
+    fontWeight: '600',
+    backgroundColor: Colors.vermilion,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+  ancestorRowName: {
     color: Colors.ink,
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 6,
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  ancestorCardRelation: {
-    color: Colors.inkMute,
+  ancestorRowAge: {
+    color: Colors.inkLight,
+    fontSize: 13,
+  },
+  ancestorRowHonor: {
+    color: Colors.amber,
     fontSize: 12,
+    fontWeight: '500',
     marginTop: 2,
-    textAlign: 'center',
   },
-  addAncestorCard: {
-    // 继承 ancestorCard
+  ancestorRowRight: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+    gap: 2,
   },
-  addAncestorCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: Colors.divider,
-    borderStyle: 'dashed',
+  ancestorRowRitual: {
+    color: Colors.vermilion,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  ancestorRowCountdown: {
+    color: Colors.inkMute,
+    fontSize: 11,
+  },
+  addMoreCard: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    marginBottom: 10,
   },
-  addAncestorText: {
+  addMoreText: {
     color: Colors.inkMute,
-    fontSize: 13,
-    marginTop: 6,
+    fontSize: 14,
   },
   // 空长辈引导
   emptyAncestorCard: {
-    flex: 1,
     backgroundColor: Colors.paperDark,
     borderRadius: 16,
     padding: 24,
