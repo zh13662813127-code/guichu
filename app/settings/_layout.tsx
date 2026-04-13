@@ -29,6 +29,27 @@ export default function SettingsLayout() {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="tts"
+        options={{
+          title: '语音引擎',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="region"
+        options={{
+          title: '我的地区',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="calendar"
+        options={{
+          title: '习俗提醒',
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 }
