@@ -26,7 +26,10 @@ import {
   Volume2,
   Edit3,
   RefreshCw,
+  Camera,
 } from 'lucide-react-native';
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../../src/constants/colors';
 import { useAncestorStore, type Ancestor } from '../../../src/stores/ancestorStore';
 import { AvatarCircle } from '../../../src/components/AvatarCircle';
@@ -54,7 +57,7 @@ function getNextRitual(events: RitualEvent[]): RitualEvent | null {
 export default function AncestorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { ancestors, loadAncestors, removeAncestor } = useAncestorStore();
+  const { ancestors, loadAncestors, removeAncestor, updateAncestorSkill } = useAncestorStore();
 
   useEffect(() => {
     loadAncestors();
@@ -137,7 +140,39 @@ export default function AncestorDetailScreen() {
       >
         {/* ── 顶部：长辈基本信息 ── */}
         <View style={styles.profileSection}>
-          <AvatarCircle name={ancestor.name} size={100} />
+          {/* 头像：点击可更换 */}
+          <Pressable
+            style={styles.avatarContainer}
+            onPress={async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                quality: 0.8,
+                allowsEditing: true,
+                aspect: [1, 1],
+              });
+              if (!result.canceled && result.assets[0]) {
+                // 更新 store 里的 avatar_path
+                updateAncestorSkill(ancestor.id, ancestor.skill_content || '');
+                // Web 端暂存到内存
+                (ancestor as any)._localAvatar = result.assets[0].uri;
+                // 强制刷新
+                loadAncestors();
+              }
+            }}
+          >
+            {ancestor.avatar_path ? (
+              <Image
+                source={{ uri: ancestor.avatar_path }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <AvatarCircle name={ancestor.name} size={100} />
+            )}
+            {/* 相机小图标 */}
+            <View style={styles.avatarBadge}>
+              <Camera color={Colors.paper} size={14} />
+            </View>
+          </Pressable>
           <Text style={styles.profileName}>{ancestor.name}</Text>
 
           {/* 关系 · 生卒年 */}
@@ -396,6 +431,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.vermilion,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.paper,
   },
   profileName: {
     color: Colors.ink,
