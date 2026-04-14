@@ -9,6 +9,7 @@ import { View, StyleSheet, Platform } from "react-native";
 import { Tabs } from "expo-router";
 import { Home, Users, Network, Settings } from "lucide-react-native";
 import { Colors } from "../src/constants/colors";
+import { WelcomeOverlay } from "../src/components/WelcomeOverlay";
 
 /** 自定义 tab 图标，选中时放大 + 底部圆点 */
 function TabIcon({
@@ -52,6 +53,7 @@ const tabIconStyles = StyleSheet.create({
 
 export default function RootLayout() {
   return (
+    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -133,5 +135,7 @@ export default function RootLayout() {
         }}
       />
     </Tabs>
+    <WelcomeOverlay />
+    </>
   );
 }

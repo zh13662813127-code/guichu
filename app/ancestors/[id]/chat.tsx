@@ -18,8 +18,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Trash2 } from 'lucide-react-native';
 import { Colors } from '../../../src/constants/colors';
 import { useAncestorStore } from '../../../src/stores/ancestorStore';
+import { useChatStore, type ChatMessage } from '../../../src/stores/chatStore';
+import { ConfirmModal } from '../../../src/components/ConfirmModal';
 
 // ─── 平台判断 ────────────────────────────────────────────
 const isNative = Platform.OS !== 'web';
@@ -35,13 +38,6 @@ const SAFETY_GUARDRAIL = `
 5. 如果用户表现出严重心理困扰，温柔建议寻求专业帮助。
 6. 保持角色一致，但如果用户明确问"你是AI吗"，诚实回答。
 `;
-
-// ─── 消息类型 ────────────────────────────────────────────
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 // ─── LLM 配置读取（与 interview.tsx 相同逻辑） ───────────
 async function loadLLMConfig(): Promise<{
@@ -81,12 +77,29 @@ export default function ChatScreen() {
   const ancestors = useAncestorStore((s) => s.ancestors);
   const ancestor = ancestors.find((a) => a.id === id);
 
-  // 消息列表与输入
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // 从 chatStore 读取对话历史
+  const conversations = useChatStore((s) => s.conversations);
+  const loadChat = useChatStore((s) => s.loadChat);
+  const addMessageToStore = useChatStore((s) => s.addMessage);
+  const updateLastAssistantMessage = useChatStore((s) => s.updateLastAssistantMessage);
+  const clearChat = useChatStore((s) => s.clearChat);
+
+  // 当前长辈的消息列表
+  const messages = conversations[id!] || [];
+
+  // 输入与状态
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasShownDisclaimer, setHasShownDisclaimer] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // 初始化时加载对话历史
+  useEffect(() => {
+    if (id) {
+      loadChat(id);
+    }
+  }, [id]);
 
   // 首次进入弹伦理提示
   useEffect(() => {
@@ -124,14 +137,15 @@ export default function ChatScreen() {
       return;
     }
 
-    // 添加用户消息
+    // 添加用户消息到 store
+    const now = new Date().toISOString();
     const userMsg: ChatMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
       content: text,
+      createdAt: now,
     };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+    addMessageToStore(id!, userMsg);
     setInputText('');
 
     // 创建占位的 assistant 消息
@@ -140,9 +154,13 @@ export default function ChatScreen() {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      createdAt: new Date().toISOString(),
     };
-    setMessages([...updatedMessages, assistantMsg]);
+    addMessageToStore(id!, assistantMsg);
     setIsStreaming(true);
+
+    // 获取包含新用户消息的完整历史（不含空的 assistant 占位）
+    const updatedMessages = [...messages, userMsg];
 
     try {
       // 动态导入 openai SDK
@@ -179,36 +197,25 @@ export default function ChatScreen() {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) {
           fullContent += delta;
-          // 逐 token 更新 assistant 消息
-          const currentContent = fullContent;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, content: currentContent } : m
-            )
-          );
+          // 逐 token 更新 assistant 消息（通过 store）
+          updateLastAssistantMessage(id!, assistantMsgId, fullContent);
         }
       }
 
-      // 流结束后确保内容完整
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId ? { ...m, content: fullContent } : m
-        )
-      );
+      // 流结束后确保内容完整并持久化
+      updateLastAssistantMessage(id!, assistantMsgId, fullContent);
     } catch (err: any) {
       console.error('聊天失败:', err);
       // 把错误显示在 assistant 消息中
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? { ...m, content: `[出错了] ${err?.message || '请检查网络和 LLM 配置'}` }
-            : m
-        )
+      updateLastAssistantMessage(
+        id!,
+        assistantMsgId,
+        `[出错了] ${err?.message || '请检查网络和 LLM 配置'}`,
       );
     } finally {
       setIsStreaming(false);
     }
-  }, [inputText, isStreaming, messages, ancestor, id, router]);
+  }, [inputText, isStreaming, messages, ancestor, id, router, addMessageToStore, updateLastAssistantMessage]);
 
   // ─── 渲染消息气泡 ─────────────────────────────────────
   const renderMessage = useCallback(
@@ -276,6 +283,19 @@ export default function ChatScreen() {
   // ─── 聊天界面 ─────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* 顶部操作栏：清空对话 */}
+      {messages.length > 0 && (
+        <View style={styles.chatHeader}>
+          <Pressable
+            style={styles.clearBtn}
+            onPress={() => setShowClearModal(true)}
+          >
+            <Trash2 color={Colors.crimson} size={16} />
+            <Text style={styles.clearBtnText}>清空对话</Text>
+          </Pressable>
+        </View>
+      )}
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -342,6 +362,21 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* 清空对话确认弹窗 */}
+      <ConfirmModal
+        visible={showClearModal}
+        title="清空对话记录"
+        message={`确认清空与${ancestor.name}的所有对话记录？此操作不可恢复。`}
+        confirmLabel="清空"
+        cancelLabel="取消"
+        destructive
+        onConfirm={() => {
+          setShowClearModal(false);
+          clearChat(id!);
+        }}
+        onCancel={() => setShowClearModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -352,6 +387,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.paper,
+  },
+  // 顶部操作栏
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  clearBtnText: {
+    color: Colors.crimson,
+    fontSize: 13,
+    fontWeight: '500',
   },
   errorText: {
     color: Colors.crimson,

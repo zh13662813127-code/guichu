@@ -12,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -70,7 +71,7 @@ function getNextRitual(events: RitualEvent[]): RitualEvent | null {
 export default function AncestorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { ancestors, loadAncestors, removeAncestor, updateAncestorSkill } = useAncestorStore();
+  const { ancestors, loadAncestors, removeAncestor, updateAncestorSkill, updateAncestorInfo } = useAncestorStore();
 
   useEffect(() => {
     loadAncestors();
@@ -163,8 +164,24 @@ export default function AncestorDetailScreen() {
                   aspect: [1, 1],
                 });
                 if (!result.canceled && result.assets[0]) {
-                  updateAncestorSkill(ancestor.id, ancestor.skill_content || '');
-                  (ancestor as any)._localAvatar = result.assets[0].uri;
+                  const uri = result.assets[0].uri;
+
+                  // 持久化头像
+                  let savedPath = uri;
+                  if (Platform.OS !== 'web') {
+                    // Native 端：复制到 app 目录
+                    const FileSystem = await import('expo-file-system');
+                    const filename = `avatar_${ancestor.id}_${Date.now()}.jpg`;
+                    const destDir = `${FileSystem.documentDirectory}photos/`;
+                    const destPath = destDir + filename;
+                    // 确保目录存在
+                    await FileSystem.makeDirectoryAsync(destDir, { intermediates: true }).catch(() => {});
+                    await FileSystem.copyAsync({ from: uri, to: destPath });
+                    savedPath = destPath;
+                  }
+
+                  // 更新 store（Web 端直接存 data URI，Native 端存本地路径）
+                  await updateAncestorInfo(ancestor.id, { avatarPath: savedPath });
                   loadAncestors();
                 }
               }}

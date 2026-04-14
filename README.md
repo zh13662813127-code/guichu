@@ -19,12 +19,58 @@
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| 记录坟墓位置 | 开发中 | 一键 GPS 定位 + 照片 + 语音备注 |
-| 导航回坟墓 | 开发中 | 调起高德/苹果/百度/Google 地图 |
-| 蒸馏长辈 .skill | 开发中 | 引导式访谈 → AI 生成数字人格 |
-| 与长辈对话 | 开发中 | 基于 .skill 的文字/语音对话 |
+| 记录坟墓位置 | 已完成 | GPS 定位 + 手动地址双模式 + 照片 + 语音备注 |
+| 寻路指南 | 已完成 | 路线记录 + 步进导航，调起高德/苹果/百度/Google 地图 |
+| 蒸馏长辈 .skill | 已完成 | 4 步引导访谈 + 双轨人格 + LLM 流式生成 |
+| 与长辈对话 | 已完成 | 基于 .skill 的流式文字对话 + 伦理护栏 |
 | 声音克隆 | 开发中 | 用长辈的声音念出 AI 回复 |
-| 族谱树 | 开发中 | 简单可视化家谱 |
+| 族谱树 | 已完成 | 分层渲染 + 连线的可视化家谱 |
+| 习俗指南 | 已完成 | 习俗知识库 + 日历计算引擎 + 详情页 |
+| AI 族谱识别 | 已完成 | 拍摄纸质族谱照片，AI 识别后批量添加祖先 |
+| 九代辈分体系 | 已完成 | 从父母辈到鼻祖辈的完整称谓 + 旁系长辈 |
+| 数据导出 | 已完成 | 本地数据导出分享 |
+| 头像更换 | 已完成 | 为祖先设置个性化头像 |
+
+### 习俗指南详情
+
+习俗指南基于本地习俗知识库（`src/features/rituals/customs/`），涵盖：
+
+- **死亡相关事件**：头七、三七、五七、七七、百日、周年祭、三周年祭
+- **年度祭扫节日**：清明节、中元节、寒衣节、除夕
+- **春联颜色建议**：按去世年份推荐白/绿/红对联
+- **地区覆盖**：支持按地区自定义携带物品和注意事项
+- **农历日期查表**：2024-2030 年中元节、寒衣节、除夕、清明的准确公历日期
+
+### AI 族谱识别
+
+通过 `app/ancestors/scan.tsx` 页面，用户可以：
+
+1. 拍摄纸质族谱的照片
+2. AI（基于用户配置的 LLM）自动识别族谱中的人名和关系
+3. 批量添加识别出的祖先到数据库
+
+### 设置页面
+
+设置页面（`app/settings/`）提供以下配置：
+
+| 设置项 | 文件 | 说明 |
+|--------|------|------|
+| LLM 配置 | `llm.tsx` | 配置 AI 对话的 API 地址和密钥（OpenAI 兼容） |
+| TTS 配置 | `tts.tsx` | 配置语音合成（文字转语音）服务 |
+| 地区设置 | `region.tsx` | 选择所在地区，影响习俗知识库的地区覆盖 |
+| 日历设置 | `calendar.tsx` | 习俗日历相关配置 |
+
+## 截图
+
+<!-- 截图占位区 — 请替换为实际截图 -->
+
+| 首页 | 族谱树 | 习俗日历 | 对话 |
+|------|--------|----------|------|
+| ![首页](docs/screenshots/home.png) | ![族谱树](docs/screenshots/tree.png) | ![习俗日历](docs/screenshots/rituals.png) | ![对话](docs/screenshots/chat.png) |
+
+| AI 识别 | 设置 | 寻路指南 | 蒸馏 |
+|---------|------|----------|------|
+| ![AI识别](docs/screenshots/scan.png) | ![设置](docs/screenshots/settings.png) | ![寻路](docs/screenshots/wayfinding.png) | ![蒸馏](docs/screenshots/distill.png) |
 
 ## 快速开始
 
@@ -39,7 +85,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/guichu.git
+git clone https://github.com/zh13662813127-code/guichu.git
 cd guichu
 npm install
 npx expo start
@@ -47,9 +93,15 @@ npx expo start
 
 用手机上的 Expo Go 扫二维码即可运行。
 
+### 运行测试
+
+```bash
+npm test
+```
+
 ### 配置 AI（可选）
 
-想要使用"与长辈对话"功能，你需要：
+想要使用"与长辈对话"或"AI 族谱识别"功能，你需要：
 
 1. 注册 [DeepSeek](https://platform.deepseek.com)（或其它 OpenAI 兼容服务）
 2. 获取 API Key
@@ -59,14 +111,38 @@ npx expo start
 
 ## 技术栈
 
-- Expo SDK 50 + React Native
-- TypeScript
-- expo-sqlite（本地数据库）
-- NativeWind（Tailwind CSS for RN）
-- Zustand（状态管理）
-- OpenAI 兼容 SDK（LLM 适配）
+- **Expo SDK 54** + React Native 0.81
+- **TypeScript** 5.9
+- **React** 19.1
+- **expo-sqlite** 15.2（本地数据库）
+- **NativeWind** 4.1（Tailwind CSS for RN）+ Tailwind CSS 3.4
+- **Zustand** 5.0（状态管理）
+- **OpenAI SDK** 4.96（LLM 适配，兼容 DeepSeek 等）
+- **date-fns** 4.1（日期计算）
+- **Zod** 3.24（数据校验）
+- **Lucide React Native**（图标）
+- **expo-location / expo-camera / expo-speech / expo-av**（原生能力）
+- **Jest** + **ts-jest**（单元测试）
 
 详见 [docs/TECH_STACK.md](docs/TECH_STACK.md)
+
+## 项目结构
+
+```
+src/
+├── adapters/        # 外部服务适配层（LLM、TTS）
+├── components/      # 通用 UI 组件
+├── constants/       # 常量定义（辈分体系、颜色等）
+├── db/              # 数据库 Schema 与迁移
+├── features/        # 功能模块
+│   ├── chat/        # 与长辈对话
+│   ├── distill-skill/ # 蒸馏 .skill 人格
+│   ├── grave-pin/   # 坟墓位置记录
+│   ├── rituals/     # 习俗指南（知识库 + 日历引擎）
+│   └── voice-clone/ # 声音克隆
+├── stores/          # Zustand 状态管理
+└── utils/           # 工具函数
+```
 
 ## 项目文档
 
@@ -82,10 +158,24 @@ npx expo start
 ## 参与贡献
 
 1. Fork 本仓库
-2. 读完 `docs/` 目录下的文档
+2. 读完 `docs/` 目录下的文档，了解产品和技术设计
 3. 看 `progress.txt` 了解当前进度
-4. 选一个未完成的功能
-5. 提 PR
+4. 选一个未完成的功能或 Issue
+5. 本地开发并确保 `npm test` 通过
+6. 提 PR，说明改了什么、为什么改
+
+### 习俗知识库贡献
+
+习俗数据位于 `src/features/rituals/customs/`，欢迎补充：
+
+- **通用习俗**：编辑 `common.json`，添加新的 `death_based` 或 `annual` 事件
+- **地区差异**：在 `regions/` 目录下添加地区 JSON 文件，格式参考现有文件
+- **农历日期**：在 `lunarDates.ts` 中补充更多年份的查表数据
+
+贡献时请注意：
+- 习俗数据应有可靠来源（地方志、民俗研究等）
+- 日期数据需经过验证
+- 保持 JSON 格式一致
 
 ## 关于 .skill 文件
 

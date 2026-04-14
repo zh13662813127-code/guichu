@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { Plus, Camera } from 'lucide-react-native';
 import { Colors } from '../../src/constants/colors';
 import { useAncestorStore, type Ancestor } from '../../src/stores/ancestorStore';
+import { IncenseParticles } from '../../src/components/IncenseParticles';
 
 // ─── 辈分标签文字 ────────────────────────────────────────
 function generationLabel(gen: number): string {
@@ -182,6 +183,11 @@ export default function AncestorsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 香火粒子背景 */}
+      <View style={styles.particleLayer}>
+        <IncenseParticles count={20} height={500} />
+      </View>
+
       {/* 顶部 */}
       <View style={styles.header}>
         <Pressable
@@ -268,6 +274,14 @@ export default function AncestorsScreen() {
 // ─── 样式 ──────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
+  particleLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none' as const,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

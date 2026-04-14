@@ -19,7 +19,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { Colors } from '../../src/constants/colors';
 import { useAncestorStore } from '../../src/stores/ancestorStore';
-import { exportAncestorsData } from '../../src/utils/exportData';
+import { exportAncestorsData, importAncestorsData } from '../../src/utils/exportData';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
 
 /** 设置项数据 */
@@ -34,6 +34,7 @@ interface SettingItem {
 export default function SettingsScreen() {
   const router = useRouter();
   const ancestors = useAncestorStore((s) => s.ancestors);
+  const addAncestor = useAncestorStore((s) => s.addAncestor);
 
   // 弹窗状态
   const [aboutVisible, setAboutVisible] = useState(false);
@@ -41,6 +42,22 @@ export default function SettingsScreen() {
   const [exportModal, setExportModal] = useState(false);
   const [mapModal, setMapModal] = useState(false);
   const [selectedMap, setSelectedMap] = useState<string>('system');
+
+  // 导入结果弹窗
+  const [importResultModal, setImportResultModal] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+
+  /** 处理导入 */
+  const handleImport = async () => {
+    setExportModal(false);
+    try {
+      const count = await importAncestorsData(addAncestor);
+      setImportResultModal({ visible: true, message: `成功导入 ${count} 条长辈记录` });
+    } catch (e: any) {
+      // 用户取消选择不提示错误
+      if (e?.message === '已取消选择') return;
+      setImportResultModal({ visible: true, message: `导入失败：${e?.message || '未知错误'}` });
+    }
+  };
 
   /** 处理导出 */
   const handleExport = async () => {
@@ -160,11 +177,11 @@ export default function SettingsScreen() {
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [s.modalBtn, s.modalBtnDisabled, pressed && { opacity: 0.8 }]}
-              onPress={() => { setExportModal(false); setWipModal({ visible: true, feature: '数据导入' }); }}
+              style={({ pressed }) => [s.modalBtn, pressed && { opacity: 0.8 }]}
+              onPress={handleImport}
             >
-              <Text style={[s.modalBtnText, { color: Colors.inkMute }]}>📥 导入数据</Text>
-              <Text style={s.modalBtnHint}>从备份恢复（开发中）</Text>
+              <Text style={s.modalBtnText}>📥 导入数据</Text>
+              <Text style={s.modalBtnHint}>从 JSON 备份恢复</Text>
             </Pressable>
 
             <Pressable style={s.modalCancel} onPress={() => setExportModal(false)}>
@@ -209,6 +226,16 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── 导入结果弹窗 ─── */}
+      <ConfirmModal
+        visible={importResultModal.visible}
+        title="导入数据"
+        message={importResultModal.message}
+        confirmLabel="知道了"
+        onConfirm={() => setImportResultModal({ visible: false, message: '' })}
+        onCancel={() => setImportResultModal({ visible: false, message: '' })}
+      />
 
       {/* ─── 关于弹窗 ─── */}
       <Modal visible={aboutVisible} transparent animationType="fade" onRequestClose={() => setAboutVisible(false)}>

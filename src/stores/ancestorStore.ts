@@ -58,6 +58,7 @@ interface AncestorStore {
     deathYear?: number;
     deathDate?: string;
     honor?: string;
+    avatarPath?: string;
   }) => Promise<void>;
 }
 
@@ -163,6 +164,7 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
         birth_year: data.birthYear,
         death_year: data.deathYear,
         death_date: data.deathDate,
+        avatar_path: data.avatarPath,
       });
       // honor 字段在内存中更新（DB schema 暂未包含此字段）
       if (data.honor !== undefined) {
@@ -187,6 +189,7 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
                 ...(data.deathYear !== undefined && { death_year: data.deathYear }),
                 ...(data.deathDate !== undefined && { death_date: data.deathDate }),
                 ...(data.honor !== undefined && { honor: data.honor }),
+                ...(data.avatarPath !== undefined && { avatar_path: data.avatarPath }),
                 updated_at: now,
               }
             : a

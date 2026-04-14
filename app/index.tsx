@@ -33,6 +33,7 @@ import { useAncestorStore } from '../src/stores/ancestorStore';
 import { AvatarCircle } from '../src/components/AvatarCircle';
 import { SectionDivider } from '../src/components/SectionDivider';
 import { EmptyState } from '../src/components/EmptyState';
+import { IncenseParticles } from '../src/components/IncenseParticles';
 import { calculateRituals, type RitualEvent } from '../src/features/rituals/calcRituals';
 
 // ─── 类型定义 ───────────────────────────────────────────
@@ -201,6 +202,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 香火粒子背景（绝对定位，不影响布局） */}
+      <View style={styles.particleLayer}>
+        <IncenseParticles count={15} height={600} />
+      </View>
+
       {/* ── 区域 A：顶部标题栏 —— 增加情感与仪式感 ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -534,6 +540,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.paper,
+  },
+  particleLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
   },
 
   // 区域 A：标题栏 —— 更大字号 + 装饰下划线
