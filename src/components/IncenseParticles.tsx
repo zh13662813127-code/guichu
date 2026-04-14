@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -143,12 +143,14 @@ export function IncenseParticles({
 
   // 预生成粒子参数（仅计算一次）
   const particles = useMemo(() => {
-    const containerWidth = typeof width === 'number' ? width : 300; // 百分比时用估算值
+    // 百分比宽度时用屏幕实际宽度，数字则直接用
+    const screenWidth = Dimensions.get('window').width;
+    const containerWidth = typeof width === 'number' ? width : screenWidth;
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       delay: Math.random() * 3000,                       // 0-3秒错开启动
       size: 2 + Math.random() * 4,                       // 2-6px
-      startX: Math.random() * (containerWidth - 10),     // 水平随机位置
+      startX: Math.random() * (containerWidth - 10),     // 全宽随机
       color: colors[Math.floor(Math.random() * colors.length)],
       duration: 4000 + Math.random() * 4000,             // 4-8秒一个循环
       swayAmount: 8 + Math.random() * 12,                // 摆动幅度 8-20px

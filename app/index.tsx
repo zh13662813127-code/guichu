@@ -203,9 +203,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 香火粒子背景（绝对定位，不影响布局） */}
+      {/* 香火粒子背景（全屏宽，不影响布局） */}
       <View style={styles.particleLayer}>
-        <IncenseParticles count={15} height={600} />
+        <IncenseParticles count={35} height={800} />
       </View>
 
       {/* ── 区域 A：顶部标题栏 —— 增加情感与仪式感 ── */}

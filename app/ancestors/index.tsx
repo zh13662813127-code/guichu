@@ -185,9 +185,9 @@ export default function AncestorsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 香火粒子背景 */}
+      {/* 香火粒子背景（全屏宽度） */}
       <View style={styles.particleLayer}>
-        <IncenseParticles count={20} height={500} />
+        <IncenseParticles count={40} height={800} />
       </View>
 
       {/* 顶部 */}
