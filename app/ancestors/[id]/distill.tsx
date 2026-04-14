@@ -23,6 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Settings, Save } from 'lucide-react-native';
 import { Colors } from '../../../src/constants/colors';
+import { Fonts, Labels } from '../../../src/constants/typography';
 import { useAncestorStore } from '../../../src/stores/ancestorStore';
 import { generateSkillFile } from '../../../src/features/distill-skill/generateSkill';
 
@@ -195,7 +196,7 @@ export default function DistillScreen() {
       setDistillText(result);
       setDistillDone(true);
     } catch (err: any) {
-      Alert.alert('蒸馏失败', err?.message || '请检查 LLM 配置后重试', [
+      Alert.alert('铸魂失败', err?.message || '请检查 LLM 配置后重试', [
         { text: '保存原始素材', onPress: () => saveRawMaterials() },
         { text: '确定' },
       ]);
@@ -242,8 +243,8 @@ export default function DistillScreen() {
         <ChevronLeft color={Colors.ink} size={24} />
       </Pressable>
       <View style={styles.headerCenter}>
-        <Text style={styles.headerTitle}>
-          蒸馏 · {ancestor.name}的人格
+        <Text style={[styles.headerTitle, { fontFamily: Fonts.classical }]}>
+          {Labels.pageDistill} · {ancestor.name}的人格
         </Text>
         <Text style={styles.stepIndicator}>
           Step {currentStep}/{TOTAL_STEPS}
@@ -473,7 +474,7 @@ export default function DistillScreen() {
                 style={[styles.primaryBtn, { flex: 1 }]}
                 onPress={handleEnterStep4}
               >
-                <Text style={styles.primaryBtnText}>开始蒸馏</Text>
+                <Text style={styles.primaryBtnText}>{Labels.btnStartDistill}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -498,7 +499,7 @@ export default function DistillScreen() {
             <Settings color={Colors.vermilion} size={28} />
             <Text style={styles.noLLMTitle}>需要配置大模型 API</Text>
             <Text style={styles.noLLMDesc}>
-              蒸馏需要调用大模型。{'\n'}
+              铸魂需要调用大模型。{'\n'}
               推荐 DeepSeek（便宜好用）
             </Text>
             <View style={styles.noLLMSteps}>
@@ -529,17 +530,17 @@ export default function DistillScreen() {
           <>
             <Text style={styles.stepTitle}>
               {isDistilling
-                ? '正在蒸馏...'
+                ? '正在铸魂...'
                 : distillDone
-                  ? '蒸馏完成'
-                  : '准备蒸馏'}
+                  ? '铸魂完成'
+                  : '准备铸魂'}
             </Text>
 
             {isDistilling && (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color={Colors.vermilion} size="small" />
                 <Text style={styles.loadingText}>
-                  调用大模型分析素材中...
+                  铸魂中，以文字铸就不朽之魂...
                 </Text>
               </View>
             )}

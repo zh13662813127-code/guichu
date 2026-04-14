@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { Colors } from '../../src/constants/colors';
+import { Fonts, Labels } from '../../src/constants/typography';
 import { useAncestorStore } from '../../src/stores/ancestorStore';
 import { exportAncestorsData, importAncestorsData } from '../../src/utils/exportData';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
@@ -124,7 +125,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>设置</Text>
+        <Text style={s.title}>{Labels.pageSettings}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -262,7 +263,7 @@ export default function SettingsScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   header: { padding: 16 },
-  title: { color: Colors.ink, fontSize: 24, fontWeight: '600' },
+  title: { color: Colors.ink, fontSize: 24, fontWeight: '600', fontFamily: Fonts.classical },
 
   // 设置项
   settingItem: {

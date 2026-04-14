@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
+import { Fonts, Labels, Descriptions } from '../src/constants/typography';
 import { useAncestorStore } from '../src/stores/ancestorStore';
 import { AvatarCircle } from '../src/components/AvatarCircle';
 import { SectionDivider } from '../src/components/SectionDivider';
@@ -75,25 +76,25 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     key: 'pin',
     icon: <MapPin color={Colors.vermilion} size={24} />,
-    label: '记录墓地',
+    label: Labels.actionPin,
     needsAncestor: false,
   },
   {
     key: 'distill',
     icon: <Sparkles color={Colors.jade} size={24} />,
-    label: '蒸馏人格',
+    label: Labels.actionDistill,
     needsAncestor: true,
   },
   {
     key: 'chat',
     icon: <MessageCircle color={Colors.amber} size={24} />,
-    label: '对话',
+    label: Labels.actionChat,
     needsAncestor: true,
   },
   {
     key: 'route',
     icon: <Map color={Colors.inkLight} size={24} />,
-    label: '寻路指南',
+    label: Labels.actionRoute,
     needsAncestor: true,
   },
 ];
@@ -229,7 +230,7 @@ export default function HomeScreen() {
           }}
         >
           <MapPin color={Colors.paper} size={16} />
-          <Text style={styles.pinButtonText}>记录此地</Text>
+          <Text style={styles.pinButtonText}>{Labels.btnRecord}</Text>
         </Pressable>
       </View>
 
@@ -268,7 +269,7 @@ export default function HomeScreen() {
 
               {/* ── 区域 C：我的长辈（纵向卡片列表） ── */}
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>我的长辈</Text>
+                <Text style={[styles.sectionTitle, { fontFamily: Fonts.classical }]}>{Labels.sectionAncestors}</Text>
                 <Pressable
                   style={styles.addButton}
                   onPress={() => router.push('/ancestors/new' as any)}
@@ -362,7 +363,7 @@ export default function HomeScreen() {
                   </>
                 ) : (
                   <EmptyState
-                    title="添加你的第一位家人"
+                    title="续写族谱，留住血脉记忆"
                     subtitle="记录他们的故事，留住珍贵的记忆"
                     actionLabel="开始添加"
                     onAction={() => router.push('/ancestors/new' as any)}
@@ -378,7 +379,7 @@ export default function HomeScreen() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Calendar color={Colors.inkLight} size={18} />
-                  <Text style={styles.sectionTitle}>习俗提醒</Text>
+                  <Text style={[styles.sectionTitle, { fontFamily: Fonts.classical }]}>{Labels.sectionRituals}</Text>
                 </View>
               </View>
 
@@ -569,6 +570,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     letterSpacing: 2,
+    fontFamily: Fonts.classical,
   },
   headerTitleUnderline: {
     width: 36,

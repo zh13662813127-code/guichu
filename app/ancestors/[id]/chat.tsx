@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import { Colors } from '../../../src/constants/colors';
+import { Fonts, Labels } from '../../../src/constants/typography';
 import { useAncestorStore } from '../../../src/stores/ancestorStore';
 import { useChatStore, type ChatMessage } from '../../../src/stores/chatStore';
 import { ConfirmModal } from '../../../src/components/ConfirmModal';
@@ -120,8 +121,8 @@ export default function ChatScreen() {
 
     // 检查 skill_content
     if (!ancestor?.skill_content) {
-      Alert.alert('提示', '请先完成访谈蒸馏，生成人格档案后才能对话。', [
-        { text: '去访谈', onPress: () => router.push(`/ancestors/${id}/interview` as any) },
+      Alert.alert('提示', '请先完成铸魂，生成人格档案后才能叙话。', [
+        { text: '去铸魂', onPress: () => router.push(`/ancestors/${id}/interview` as any) },
         { text: '取消' },
       ]);
       return;
@@ -265,9 +266,9 @@ export default function ChatScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📝</Text>
-          <Text style={styles.emptyTitle}>请先完成访谈蒸馏</Text>
+          <Text style={styles.emptyTitle}>请先完成铸魂</Text>
           <Text style={styles.emptyHint}>
-            需要先记录长辈的故事并生成人格档案，才能开始对话。
+            需要先记录先人的故事并铸就人格，才能开始叙话。
           </Text>
           <Pressable
             style={styles.emptyBtn}
@@ -316,8 +317,8 @@ export default function ChatScreen() {
           ListEmptyComponent={
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeIcon}>💬</Text>
-              <Text style={styles.welcomeText}>
-                和{ancestor.name}聊聊吧
+              <Text style={[styles.welcomeText, { fontFamily: Fonts.classical }]}>
+                与{ancestor.name}叙话
               </Text>
               {/* 用长辈说话风格模拟一句欢迎语 */}
               <Text style={styles.welcomeQuote}>
@@ -338,7 +339,7 @@ export default function ChatScreen() {
             style={styles.textInput}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={`对${ancestor.name}说些什么...`}
+            placeholder={`与${ancestor.name}叙话...`}
             placeholderTextColor={Colors.inkMute}
             multiline
             maxLength={2000}

@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { IncenseParticles } from './IncenseParticles';
 import { Colors } from '../constants/colors';
+import { Fonts, Labels } from '../constants/typography';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -82,12 +83,12 @@ export function WelcomeOverlay() {
       {/* 中央品牌文字 */}
       <View style={styles.content}>
         <Animated.Text style={[styles.title, titleStyle]}>
-          归 处
+          {Labels.welcomeTitle}
         </Animated.Text>
 
         <Animated.View style={[styles.subtitleWrap, subtitleStyle]}>
-          <Text style={styles.subtitle}>在你还来得及的时候</Text>
-          <Text style={styles.subtitle}>把他们留下来</Text>
+          <Text style={styles.subtitle}>血脉所系，根脉所归</Text>
+          <Text style={styles.subtitle}>家的记忆，代代相传</Text>
         </Animated.View>
       </View>
 
@@ -124,10 +125,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: {
-    fontSize: 48,
+    fontSize: 72,
     fontWeight: '700',
     color: Colors.ink,
-    letterSpacing: 12,
+    letterSpacing: 24,
+    fontFamily: Fonts.classical,
   },
   subtitleWrap: {
     alignItems: 'center',
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
     color: Colors.inkLight,
     lineHeight: 26,
     letterSpacing: 1,
+    fontFamily: Fonts.serif,
   },
 
   // 底部装饰

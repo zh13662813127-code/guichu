@@ -33,6 +33,7 @@ import {
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../../src/constants/colors';
+import { Fonts, Labels, Descriptions } from '../../../src/constants/typography';
 import { useAncestorStore, type Ancestor } from '../../../src/stores/ancestorStore';
 import { AvatarCircle } from '../../../src/components/AvatarCircle';
 import { ConfirmModal } from '../../../src/components/ConfirmModal';
@@ -219,7 +220,7 @@ export default function AncestorDetailScreen() {
               {hasSkill && (
                 <View style={[styles.tag, styles.tagJade]}>
                   <Sparkles color={Colors.jade} size={12} />
-                  <Text style={styles.tagTextJade}>已蒸馏</Text>
+                  <Text style={styles.tagTextJade}>已铸魂</Text>
                 </View>
               )}
               {hasVoice && (
@@ -236,9 +237,9 @@ export default function AncestorDetailScreen() {
             {/* 1. 墓地位置 — vermilion 竖条 */}
             <FeatureCard
               icon={<MapPin color={Colors.vermilion} size={22} />}
-              title="墓地位置"
+              title={Labels.cardGrave}
               description={
-                hasGrave ? '已记录位置坐标' : '还没有记录位置'
+                hasGrave ? '已记录位置坐标' : Descriptions.cardGrave
               }
               actionLabel={hasGrave ? '导航到此处' : '去记录'}
               onAction={() =>
@@ -251,11 +252,11 @@ export default function AncestorDetailScreen() {
             {/* 2. 寻路指南 — inkLight 竖条 */}
             <FeatureCard
               icon={<Map color={Colors.inkLight} size={22} />}
-              title="寻路指南"
+              title={Labels.cardRoute}
               description={
                 waypointCount > 0
                   ? `已记录 ${waypointCount} 个路线点`
-                  : '记录从村口到墓地的路线'
+                  : Descriptions.cardRoute
               }
               actionLabel={waypointCount > 0 ? '查看路线' : '开始记录'}
               onAction={() => {
@@ -268,7 +269,7 @@ export default function AncestorDetailScreen() {
             {/* 3. 蒸馏人格 · .skill — jade 竖条 */}
             <FeatureCard
               icon={<Sparkles color={Colors.jade} size={22} />}
-              title="蒸馏人格 · .skill"
+              title={Labels.cardDistill}
               accentColor={Colors.jade}
             >
               {hasSkill ? (
@@ -296,14 +297,14 @@ export default function AncestorDetailScreen() {
                       }}
                     >
                       <RefreshCw color={Colors.vermilion} size={14} />
-                      <Text style={styles.skillActionText}>重新蒸馏</Text>
+                      <Text style={styles.skillActionText}>重新铸魂</Text>
                     </Pressable>
                   </View>
                 </View>
               ) : (
                 <View>
                   <Text style={styles.interviewHint}>
-                    上传聊天记录、口述回忆等素材，AI 会将其蒸馏为可对话的数字人格
+                    {Descriptions.cardDistill}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [
@@ -316,7 +317,7 @@ export default function AncestorDetailScreen() {
                   >
                     <Sparkles color={Colors.paper} size={18} />
                     <Text style={styles.interviewButtonText}>
-                      开始蒸馏
+                      {Labels.btnStartDistill}
                     </Text>
                   </Pressable>
                 </View>
@@ -326,13 +327,13 @@ export default function AncestorDetailScreen() {
             {/* 4. 对话 — amber 竖条 */}
             <FeatureCard
               icon={<MessageCircle color={Colors.amber} size={22} />}
-              title="对话"
+              title={Labels.cardChat}
               description={
                 hasSkill
-                  ? `和${ancestor.name}聊聊`
-                  : '先完成访谈蒸馏才能对话'
+                  ? `与${ancestor.name}叙话`
+                  : Descriptions.cardChat
               }
-              actionLabel={hasSkill ? `和${ancestor.name}聊聊` : undefined}
+              actionLabel={hasSkill ? `与${ancestor.name}叙话` : undefined}
               onAction={
                 hasSkill
                   ? () => {
@@ -347,9 +348,9 @@ export default function AncestorDetailScreen() {
             {/* 5. 声音档案 — crimson 竖条 */}
             <FeatureCard
               icon={<Mic color={Colors.crimson} size={22} />}
-              title="声音档案"
+              title={Labels.cardVoice}
               description={
-                hasVoice ? '已训练声音模型' : '训练声音，让对话更真实'
+                hasVoice ? '已训练声音模型' : Descriptions.cardVoice
               }
               actionLabel="训练声音"
               onAction={() => {
@@ -362,7 +363,7 @@ export default function AncestorDetailScreen() {
             {/* 6. 习俗日历 — amber 竖条 */}
             <FeatureCard
               icon={<Calendar color={Colors.amber} size={22} />}
-              title="习俗日历"
+              title={Labels.cardRituals}
               accentColor={Colors.amber}
             >
               {nextRitual ? (
@@ -534,6 +535,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     marginTop: 14,
+    fontFamily: Fonts.classical,
   },
   profileMeta: {
     color: Colors.inkLight,

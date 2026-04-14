@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
+import { Fonts, Labels } from '../src/constants/typography';
 import { useAncestorStore, type Ancestor } from '../src/stores/ancestorStore';
 import { AvatarCircle } from '../src/components/AvatarCircle';
 import { PrimaryButton } from '../src/components/PrimaryButton';
@@ -195,7 +196,7 @@ export default function TreeScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>族谱</Text>
+          <Text style={styles.title}>{Labels.tabTree}</Text>
         </View>
         <View style={styles.emptyContainer}>
           <EmptyState
@@ -214,7 +215,7 @@ export default function TreeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         {/* 书法感标题 */}
-        <Text style={styles.title}>族谱</Text>
+        <Text style={styles.title}>{Labels.tabTree}</Text>
         <Text style={styles.subtitle}>
           共 {ancestors.length} 位家人 · {layers.length} 代
         </Text>
@@ -307,6 +308,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: 4,
+    fontFamily: Fonts.classical,
   },
   subtitle: {
     color: Colors.inkLight,

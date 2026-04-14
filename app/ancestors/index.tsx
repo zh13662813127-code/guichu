@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Camera } from 'lucide-react-native';
 import { Colors } from '../../src/constants/colors';
+import { Fonts, Labels, Descriptions } from '../../src/constants/typography';
 import { useAncestorStore, type Ancestor } from '../../src/stores/ancestorStore';
 import { IncenseParticles } from '../../src/components/IncenseParticles';
 
@@ -96,6 +97,7 @@ const tabletStyles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 4,
     lineHeight: 26,
+    fontFamily: Fonts.classical,
   },
   relationship: {
     color: Colors.vermilion,
@@ -195,7 +197,7 @@ export default function AncestorsScreen() {
           onPress={() => router.push('/ancestors/new' as any)}
         >
           <Plus color={Colors.paper} size={16} />
-          <Text style={styles.addBtnText}>添加长辈</Text>
+          <Text style={styles.addBtnText}>{Labels.btnAddAncestor}</Text>
         </Pressable>
 
         <Pressable
@@ -206,7 +208,7 @@ export default function AncestorsScreen() {
           <Text style={styles.scanBtnText}>AI 识别</Text>
         </Pressable>
 
-        <Text style={styles.headerTitle}>家族灵位</Text>
+        <Text style={styles.headerTitle}>{Labels.tabAncestors}</Text>
       </View>
 
       {/* 内容区 */}
@@ -223,8 +225,8 @@ export default function AncestorsScreen() {
             <View style={styles.emptyCircle}>
               <Plus color={Colors.inkMute} size={32} />
             </View>
-            <Text style={styles.emptyTitle}>添加你的第一位家人</Text>
-            <Text style={styles.emptyHint}>记录他们的故事，留住珍贵的记忆</Text>
+            <Text style={styles.emptyTitle}>{Descriptions.emptyAncestors.split('\n')[0]}</Text>
+            <Text style={styles.emptyHint}>{Descriptions.emptyAncestors.split('\n')[1]}</Text>
           </Pressable>
         </View>
       ) : (
@@ -312,7 +314,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.vermilion,
   },
   scanBtnText: { color: Colors.vermilion, fontSize: 13, fontWeight: '600' },
-  headerTitle: { color: Colors.ink, fontSize: 20, fontWeight: '700', marginLeft: 'auto' },
+  headerTitle: { color: Colors.ink, fontSize: 20, fontWeight: '700', marginLeft: 'auto', fontFamily: Fonts.classical },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // 诗句

@@ -9,6 +9,7 @@ import { View, StyleSheet, Platform } from "react-native";
 import { Tabs } from "expo-router";
 import { Home, Users, Network, Settings } from "lucide-react-native";
 import { Colors } from "../src/constants/colors";
+import { Fonts, Labels } from "../src/constants/typography";
 import { WelcomeOverlay } from "../src/components/WelcomeOverlay";
 
 /** 自定义 tab 图标，选中时放大 + 底部圆点 */
@@ -75,13 +76,14 @@ export default function RootLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "500",
+          fontFamily: Fonts.classical,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "时间线",
+          title: Labels.tabHome,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
               IconComponent={Home}
@@ -95,7 +97,7 @@ export default function RootLayout() {
       <Tabs.Screen
         name="ancestors"
         options={{
-          title: "长辈",
+          title: Labels.tabAncestors,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
               IconComponent={Users}
@@ -109,7 +111,7 @@ export default function RootLayout() {
       <Tabs.Screen
         name="tree"
         options={{
-          title: "族谱",
+          title: Labels.tabTree,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
               IconComponent={Network}
@@ -123,7 +125,7 @@ export default function RootLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "设置",
+          title: Labels.tabSettings,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon
               IconComponent={Settings}
