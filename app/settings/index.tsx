@@ -245,7 +245,7 @@ export default function SettingsScreen() {
             <Text style={s.aboutName}>归处 Guichu</Text>
             <Text style={s.aboutVer}>v0.1.0</Text>
             <Text style={s.aboutDesc}>开源电子族谱</Text>
-            <Text style={s.aboutQuote}>"在你还来得及的时候，把他们留下来。"</Text>
+            <Text style={s.aboutQuote}>"血脉所系，根脉所归"</Text>
             <Text style={s.aboutLicense}>MIT License</Text>
             <Pressable onPress={() => Linking.openURL('https://github.com/zh13662813127-code/guichu')}>
               <Text style={s.aboutLink}>GitHub: zh13662813127-code/guichu</Text>
