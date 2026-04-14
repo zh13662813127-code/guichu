@@ -140,6 +140,7 @@ export default function LLMSettingsScreen() {
   const [model, setModel] = useState(PROVIDERS.deepseek.model);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
   // 加载已保存的配置
@@ -170,12 +171,14 @@ export default function LLMSettingsScreen() {
   // 测试连接
   const testConnection = useCallback(async () => {
     if (!apiKey.trim()) {
-      Alert.alert('提示', '请先填写 API Key');
+      setErrorDetail('请先填写 API Key');
+      setTestResult('fail');
       return;
     }
 
     setIsTesting(true);
     setTestResult(null);
+    setErrorDetail('');
 
     try {
       const OpenAI = (await import('openai')).default;
@@ -195,11 +198,31 @@ export default function LLMSettingsScreen() {
         setTestResult('success');
       } else {
         setTestResult('fail');
+        setErrorDetail('模型未返回有效内容');
       }
     } catch (err: any) {
       console.error('LLM 测试连接失败:', err);
       setTestResult('fail');
-      Alert.alert('连接失败', err?.message || '请检查配置后重试');
+
+      // 提取错误信息
+      let msg = err?.message || '请检查配置后重试';
+
+      // 解析常见错误
+      if (msg.includes('CORS') || msg.includes('Network') || msg.includes('Failed to fetch')) {
+        msg = '浏览器 CORS 限制：Moonshot/OpenAI 等 API 服务器不允许浏览器直接跨域调用。\n\n解决方案：\n1. 用手机端 Expo Go 扫码测试（无 CORS 限制）\n2. 或改用 DeepSeek（已开放 CORS）\n3. 或自建代理服务器';
+      } else if (err?.status === 401 || msg.includes('401')) {
+        msg = 'API Key 无效、已过期或余额不足。请到官方后台检查。';
+      } else if (err?.status === 404) {
+        msg = `模型或端点不存在（404）：\n- 模型名："${model}"\n- API 地址："${baseURL}"\n请到官方文档确认模型名是否正确。`;
+      } else if (err?.status === 429) {
+        msg = '请求过快或已达到限流额度，请稍后重试。';
+      } else if (err?.status === 400) {
+        msg = `请求格式错误：${msg}`;
+      } else if (err?.status && err?.status >= 500) {
+        msg = `服务器错误（${err.status}）：服务提供方可能宕机，请稍后重试。`;
+      }
+
+      setErrorDetail(msg);
     } finally {
       setIsTesting(false);
     }
@@ -324,9 +347,16 @@ export default function LLMSettingsScreen() {
 
         {testResult === 'success' && (
           <Text style={styles.successHint}>
-            模型响应正常，可以保存配置。
+            ✓ 模型响应正常，可以保存配置。
           </Text>
         )}
+
+        {testResult === 'fail' && errorDetail ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>错误详情</Text>
+            <Text style={styles.errorText}>{errorDetail}</Text>
+          </View>
+        ) : null}
 
         {/* 保存 */}
         <Pressable style={styles.saveBtn} onPress={handleSave}>
@@ -436,6 +466,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: 8,
+  },
+
+  // ─── 错误详情框 ───
+  errorBox: {
+    marginTop: 12,
+    backgroundColor: Colors.crimson + '12',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.crimson,
+    borderRadius: 8,
+    padding: 12,
+  },
+  errorTitle: {
+    color: Colors.crimson,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  errorText: {
+    color: Colors.ink,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   // ─── 保存 ───────────────────────────────────
