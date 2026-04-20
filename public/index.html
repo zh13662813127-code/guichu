@@ -275,41 +275,95 @@ section.tight-bottom .section-head{margin-bottom:0}
 /* ────────────── ambient embers (上升微粒) ────────────── */
 .embers{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden;contain:strict}
 .ember{
-  position:absolute;bottom:-24px;width:4px;height:4px;border-radius:50%;
-  background:radial-gradient(circle, rgba(179,58,42,.65), rgba(179,58,42,0) 70%);
+  position:absolute;bottom:-24px;width:3px;height:3px;border-radius:50%;
+  background:radial-gradient(circle, rgba(179,58,42,.7), rgba(179,58,42,0) 70%);
   opacity:0;filter:blur(.4px);
   animation:emberRise var(--dur,20s) var(--delay,0s) linear infinite;
   will-change:transform,opacity
 }
-.ember.dim{width:3px;height:3px;background:radial-gradient(circle, rgba(184,162,110,.55), rgba(184,162,110,0) 70%)}
-.ember.tiny{width:2px;height:2px;background:radial-gradient(circle, rgba(82,78,74,.45), rgba(82,78,74,0) 70%)}
+/* size + color variants */
+.ember.dim  {width:3px;height:3px;background:radial-gradient(circle, rgba(184,162,110,.6),  rgba(184,162,110,0) 70%)}
+.ember.tiny {width:2px;height:2px;background:radial-gradient(circle, rgba(82,78,74,.5),     rgba(82,78,74,0)    70%);filter:blur(.2px)}
+.ember.warm {width:4px;height:4px;background:radial-gradient(circle, rgba(210,150,80,.7),   rgba(210,150,80,0)  70%)}
+.ember.glow {width:6px;height:6px;filter:blur(1.2px);background:radial-gradient(circle, rgba(179,58,42,.9) 10%, rgba(179,58,42,.3) 45%, rgba(179,58,42,0) 72%)}
+.ember.glow.warm{background:radial-gradient(circle, rgba(210,150,80,.9) 10%, rgba(210,150,80,.3) 45%, rgba(210,150,80,0) 72%)}
+/* motion variants */
+.ember.sway {animation-name:emberSway}
+.ember.drift{animation-name:emberDrift}
+
 @keyframes emberRise{
   0%  {transform:translate3d(0,0,0);opacity:0}
-  10% {opacity:.55}
-  50% {transform:translate3d(var(--dx,10px),-55vh,0);opacity:.4}
-  88% {opacity:.12}
+  8%  {opacity:.65}
+  50% {transform:translate3d(var(--dx,10px),-55vh,0);opacity:.5}
+  85% {opacity:.18}
   100%{transform:translate3d(calc(var(--dx,10px) * -0.4),-115vh,0);opacity:0}
 }
-.ember:nth-child(1) { left:4%;  --dur:22s; --delay:0s;   --dx:16px }
-.ember:nth-child(2) { left:10%; --dur:26s; --delay:3s;   --dx:-12px }
-.ember:nth-child(3) { left:16%; --dur:19s; --delay:1s;   --dx:10px }
-.ember:nth-child(4) { left:23%; --dur:28s; --delay:5s;   --dx:-14px }
-.ember:nth-child(5) { left:29%; --dur:21s; --delay:2s;   --dx:13px }
-.ember:nth-child(6) { left:36%; --dur:25s; --delay:7s;   --dx:-9px }
-.ember:nth-child(7) { left:42%; --dur:18s; --delay:4s;   --dx:11px }
-.ember:nth-child(8) { left:49%; --dur:24s; --delay:0.5s; --dx:-15px }
-.ember:nth-child(9) { left:55%; --dur:27s; --delay:6s;   --dx:8px }
-.ember:nth-child(10){ left:62%; --dur:20s; --delay:2.5s; --dx:-11px }
-.ember:nth-child(11){ left:68%; --dur:23s; --delay:8s;   --dx:14px }
-.ember:nth-child(12){ left:75%; --dur:17s; --delay:3.5s; --dx:-8px }
-.ember:nth-child(13){ left:81%; --dur:29s; --delay:1.5s; --dx:10px }
-.ember:nth-child(14){ left:88%; --dur:22s; --delay:5.5s; --dx:-13px }
-.ember:nth-child(15){ left:94%; --dur:24s; --delay:3s;   --dx:12px }
-.ember:nth-child(16){ left:7%;  --dur:30s; --delay:9s;   --dx:-7px }
-.ember:nth-child(17){ left:33%; --dur:26s; --delay:11s;  --dx:9px }
-.ember:nth-child(18){ left:59%; --dur:21s; --delay:10s;  --dx:-10px }
-.ember:nth-child(19){ left:79%; --dur:28s; --delay:12s;  --dx:11px }
-.ember:nth-child(20){ left:14%; --dur:25s; --delay:6.5s; --dx:-9px }
+@keyframes emberSway{
+  0%  {transform:translate3d(0,0,0);opacity:0}
+  8%  {opacity:.6}
+  25% {transform:translate3d(var(--dx,12px),-28vh,0);opacity:.55}
+  50% {transform:translate3d(calc(var(--dx,12px) * -1),-58vh,0);opacity:.45}
+  75% {transform:translate3d(var(--dx,12px),-88vh,0);opacity:.25}
+  100%{transform:translate3d(0,-115vh,0);opacity:0}
+}
+@keyframes emberDrift{
+  0%  {transform:translate3d(0,0,0) scale(.6);opacity:0}
+  12% {opacity:.7;transform:translate3d(calc(var(--dx,10px) * 0.2),-8vh,0) scale(1)}
+  45% {transform:translate3d(var(--dx,10px),-48vh,0) scale(1);opacity:.5}
+  75% {transform:translate3d(calc(var(--dx,10px) * 1.3),-80vh,0) scale(.9);opacity:.3}
+  100%{transform:translate3d(calc(var(--dx,10px) * 0.6),-115vh,0) scale(.4);opacity:0}
+}
+
+/* 48 particles — varied position / duration / delay / horizontal drift */
+.ember:nth-child(1) { left:2%;  --dur:22s; --delay:0s;    --dx:14px }
+.ember:nth-child(2) { left:5%;  --dur:28s; --delay:4s;    --dx:-11px }
+.ember:nth-child(3) { left:9%;  --dur:19s; --delay:1.5s;  --dx:9px }
+.ember:nth-child(4) { left:13%; --dur:26s; --delay:7s;    --dx:-13px }
+.ember:nth-child(5) { left:17%; --dur:21s; --delay:2s;    --dx:11px }
+.ember:nth-child(6) { left:21%; --dur:30s; --delay:9s;    --dx:-8px }
+.ember:nth-child(7) { left:25%; --dur:17s; --delay:3.5s;  --dx:15px }
+.ember:nth-child(8) { left:28%; --dur:24s; --delay:6s;    --dx:-12px }
+.ember:nth-child(9) { left:32%; --dur:20s; --delay:0.8s;  --dx:10px }
+.ember:nth-child(10){ left:35%; --dur:27s; --delay:5s;    --dx:-14px }
+.ember:nth-child(11){ left:38%; --dur:23s; --delay:11s;   --dx:12px }
+.ember:nth-child(12){ left:41%; --dur:18s; --delay:2.5s;  --dx:-9px }
+.ember:nth-child(13){ left:44%; --dur:29s; --delay:8s;    --dx:13px }
+.ember:nth-child(14){ left:47%; --dur:22s; --delay:4.5s;  --dx:-11px }
+.ember:nth-child(15){ left:50%; --dur:25s; --delay:0s;    --dx:10px }
+.ember:nth-child(16){ left:53%; --dur:19s; --delay:10s;   --dx:-15px }
+.ember:nth-child(17){ left:56%; --dur:31s; --delay:3s;    --dx:9px }
+.ember:nth-child(18){ left:59%; --dur:21s; --delay:7.5s;  --dx:-12px }
+.ember:nth-child(19){ left:62%; --dur:26s; --delay:1.2s;  --dx:14px }
+.ember:nth-child(20){ left:65%; --dur:23s; --delay:12s;   --dx:-10px }
+.ember:nth-child(21){ left:68%; --dur:17s; --delay:5.5s;  --dx:11px }
+.ember:nth-child(22){ left:71%; --dur:28s; --delay:2s;    --dx:-13px }
+.ember:nth-child(23){ left:74%; --dur:20s; --delay:8.5s;  --dx:8px }
+.ember:nth-child(24){ left:77%; --dur:25s; --delay:3.8s;  --dx:-9px }
+.ember:nth-child(25){ left:80%; --dur:18s; --delay:6.5s;  --dx:12px }
+.ember:nth-child(26){ left:83%; --dur:30s; --delay:0.3s;  --dx:-14px }
+.ember:nth-child(27){ left:86%; --dur:22s; --delay:9s;    --dx:10px }
+.ember:nth-child(28){ left:89%; --dur:24s; --delay:4s;    --dx:-11px }
+.ember:nth-child(29){ left:92%; --dur:27s; --delay:11.5s; --dx:13px }
+.ember:nth-child(30){ left:95%; --dur:19s; --delay:2.8s;  --dx:-8px }
+.ember:nth-child(31){ left:7%;  --dur:32s; --delay:13s;   --dx:11px }
+.ember:nth-child(32){ left:19%; --dur:26s; --delay:14s;   --dx:-10px }
+.ember:nth-child(33){ left:30%; --dur:21s; --delay:15s;   --dx:9px }
+.ember:nth-child(34){ left:42%; --dur:24s; --delay:13.5s; --dx:-12px }
+.ember:nth-child(35){ left:54%; --dur:28s; --delay:16s;   --dx:14px }
+.ember:nth-child(36){ left:66%; --dur:23s; --delay:14.5s; --dx:-11px }
+.ember:nth-child(37){ left:78%; --dur:26s; --delay:17s;   --dx:8px }
+.ember:nth-child(38){ left:90%; --dur:20s; --delay:15.5s; --dx:-13px }
+.ember:nth-child(39){ left:11%; --dur:29s; --delay:18s;   --dx:10px }
+.ember:nth-child(40){ left:23%; --dur:22s; --delay:19s;   --dx:-9px }
+.ember:nth-child(41){ left:36%; --dur:25s; --delay:20s;   --dx:12px }
+.ember:nth-child(42){ left:48%; --dur:31s; --delay:18.5s; --dx:-14px }
+.ember:nth-child(43){ left:60%; --dur:18s; --delay:21s;   --dx:10px }
+.ember:nth-child(44){ left:72%; --dur:27s; --delay:19.5s; --dx:-11px }
+.ember:nth-child(45){ left:84%; --dur:23s; --delay:22s;   --dx:13px }
+.ember:nth-child(46){ left:96%; --dur:30s; --delay:20.5s; --dx:-9px }
+.ember:nth-child(47){ left:15%; --dur:21s; --delay:23s;   --dx:11px }
+.ember:nth-child(48){ left:63%; --dur:26s; --delay:24s;   --dx:-12px }
+
 @media (prefers-reduced-motion: reduce){
   .embers{display:none}
   .reveal{transition-duration:.4s}
@@ -369,28 +423,56 @@ section.tight-bottom .section-head{margin-bottom:0}
   </div>
 </div>
 
-<!-- ambient embers: 上升微粒（香火/尘埃意象） -->
+<!-- ambient embers: 48 颗上升微粒（香火/尘埃意象），混合色号、尺寸、运动曲线 -->
 <div class="embers" aria-hidden="true">
-  <span class="ember"></span>
-  <span class="ember dim"></span>
-  <span class="ember"></span>
+  <span class="ember glow"></span>
+  <span class="ember dim sway"></span>
   <span class="ember tiny"></span>
+  <span class="ember warm"></span>
   <span class="ember dim"></span>
-  <span class="ember"></span>
+  <span class="ember sway"></span>
+  <span class="ember tiny drift"></span>
+  <span class="ember glow warm"></span>
+  <span class="ember dim"></span>
+  <span class="ember sway"></span>
   <span class="ember tiny"></span>
-  <span class="ember dim"></span>
-  <span class="ember"></span>
-  <span class="ember dim"></span>
+  <span class="ember warm sway"></span>
+  <span class="ember dim drift"></span>
+  <span class="ember glow"></span>
   <span class="ember tiny"></span>
-  <span class="ember"></span>
-  <span class="ember dim"></span>
-  <span class="ember"></span>
+  <span class="ember dim sway"></span>
+  <span class="ember warm"></span>
   <span class="ember tiny"></span>
+  <span class="ember drift"></span>
   <span class="ember dim"></span>
-  <span class="ember"></span>
+  <span class="ember glow warm"></span>
+  <span class="ember tiny sway"></span>
+  <span class="ember dim"></span>
+  <span class="ember warm"></span>
+  <span class="ember sway"></span>
   <span class="ember tiny"></span>
+  <span class="ember glow"></span>
+  <span class="ember dim drift"></span>
+  <span class="ember tiny"></span>
+  <span class="ember sway"></span>
   <span class="ember dim"></span>
-  <span class="ember"></span>
+  <span class="ember warm sway"></span>
+  <span class="ember tiny"></span>
+  <span class="ember drift"></span>
+  <span class="ember glow"></span>
+  <span class="ember dim sway"></span>
+  <span class="ember tiny"></span>
+  <span class="ember warm"></span>
+  <span class="ember dim"></span>
+  <span class="ember sway"></span>
+  <span class="ember glow warm"></span>
+  <span class="ember tiny drift"></span>
+  <span class="ember dim"></span>
+  <span class="ember sway"></span>
+  <span class="ember warm"></span>
+  <span class="ember tiny"></span>
+  <span class="ember dim drift"></span>
+  <span class="ember glow"></span>
 </div>
 
 <!-- ────────── 主页面 ────────── -->
