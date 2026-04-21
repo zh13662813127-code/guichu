@@ -164,8 +164,10 @@ section{position:relative;padding:clamp(100px,14vh,160px) 0}
 
 /* ────────────── three pillars ────────────── */
 .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--divider);border-top:1px solid var(--divider);border-bottom:1px solid var(--divider);margin-top:clamp(32px,5vh,64px)}
-.pillar{background:var(--paper);padding:64px 36px 56px;position:relative;transition:background .6s ease}
+.pillar{background:var(--paper);padding:64px 36px 56px;position:relative;transition:background .6s ease;display:block;color:inherit;text-decoration:none;cursor:pointer}
 .pillar:hover{background:var(--paper-warm)}
+.pillar:hover .p-cta{color:var(--vermilion);transform:translateX(4px)}
+.pillar .p-cta{margin-top:20px;font-family:var(--display);font-size:13px;letter-spacing:.08em;color:var(--ink-light);font-weight:500;transition:color .3s ease, transform .3s ease}
 .pillar .p-num{font-family:var(--display);font-size:12px;letter-spacing:.4em;color:var(--vermilion);margin-bottom:28px;display:flex;align-items:center;gap:12px;font-weight:500}
 .pillar .p-num::after{content:"";flex:1;height:1px;background:var(--divider);margin-left:8px}
 .pillar .p-icon{width:56px;height:56px;margin-bottom:28px;color:var(--ink-soft)}
@@ -489,7 +491,7 @@ section.tight-bottom .section-head{margin-bottom:0}
         <li><a href="#ethics">伦理</a></li>
         <li><a href="#download">开始</a></li>
       </ul>
-      <a class="gh" href="https://github.com/zh13662813127-code/guichu" target="_blank" rel="noopener">GITHUB</a>
+      <a class="gh" href="./app/">进入应用</a>
     </div>
   </nav>
 
@@ -533,7 +535,7 @@ section.tight-bottom .section-head{margin-bottom:0}
         在他们走后，仍能再问一句「最近怎么样」。
       </p>
       <div class="hero-meta reveal d3">
-        <a href="#download" class="btn btn-primary">
+        <a href="./app/" class="btn btn-primary">
           <span>开始记录</span>
           <span class="arrow">→</span>
         </a>
@@ -583,7 +585,7 @@ section.tight-bottom .section-head{margin-bottom:0}
       </div>
 
       <div class="pillars reveal d1">
-      <div class="pillar">
+      <a class="pillar" href="./app/ancestors/new">
         <div class="p-num">一 · 记处</div>
         <svg class="p-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M24 6c-7.2 0-13 5.6-13 12.5 0 9.4 13 23.5 13 23.5s13-14.1 13-23.5C37 11.6 31.2 6 24 6z"/>
@@ -592,9 +594,10 @@ section.tight-bottom .section-head{margin-bottom:0}
         <h3>记一处归乡的路</h3>
         <p>站在那片熟悉的土地上，按一下。GPS、照片、一段语音备注。下次回乡，地图自动带你回到同一个坐标，一步不错。</p>
         <div class="p-tag">坟墓定位 · 步进导航 · 高德/苹果/百度</div>
-      </div>
+        <div class="p-cta">开始记录 →</div>
+      </a>
 
-      <div class="pillar">
+      <a class="pillar" href="./app/ancestors">
         <div class="p-num">二 · 传神</div>
         <svg class="p-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 36c0-6.6 5.4-12 12-12s12 5.4 12 12"/>
@@ -604,9 +607,10 @@ section.tight-bottom .section-head{margin-bottom:0}
         <h3>蒸馏一位长辈</h3>
         <p>四步引导式访谈。身份、口头禅、几件要紧的事、价值观。记录的是他这个人，不是一个聊天机器人。生成的 .skill 文件，可读、可改、可传给家人。</p>
         <div class="p-tag">双轨人格 · Markdown + YAML · 本地存储</div>
-      </div>
+        <div class="p-cta">进入蒸馏 →</div>
+      </a>
 
-      <div class="pillar">
+      <a class="pillar" href="./app/">
         <div class="p-num">三 · 念白</div>
         <svg class="p-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M8 14 h32 v20 H18 l-10 8 V14z"/>
@@ -615,7 +619,8 @@ section.tight-bottom .section-head{margin-bottom:0}
         <h3>再听一次熟悉的话</h3>
         <p>基于 .skill 的流式对话。你可以自愿授权克隆长辈的声音，让那些你想再听一遍的回答，有一个熟悉的嗓音。我们在接口层加了几道伦理护栏。</p>
         <div class="p-tag">BYOK · 本地对话 · 可选声音克隆</div>
-      </div>
+        <div class="p-cta">开始对话 →</div>
+      </a>
       </div>
     </div>
   </section>
@@ -796,9 +801,12 @@ section.tight-bottom .section-head{margin-bottom:0}
     <div class="wrap">
       <h2 class="reveal">趁还来得及，<br/>先记一处。</h2>
       <div class="cta-actions reveal d1">
-        <a class="btn btn-primary" href="https://github.com/zh13662813127-code/guichu" target="_blank" rel="noopener">
-          <span>获取源码</span>
+        <a class="btn btn-primary" href="./app/">
+          <span>立即使用</span>
           <span class="arrow">→</span>
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/zh13662813127-code/guichu" target="_blank" rel="noopener">
+          <span>获取源码</span>
         </a>
         <a class="btn btn-ghost" href="https://github.com/zh13662813127-code/guichu/blob/main/docs/PRD.md" target="_blank" rel="noopener">
           <span>读产品需求</span>

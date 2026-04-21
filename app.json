@@ -38,7 +38,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "baseUrl": "/guichu"
+      "baseUrl": "/guichu/app"
     }
   }
 }

@@ -1,4 +1,9 @@
-name: Deploy Web App to GitHub Pages
+name: Deploy Landing + Web App to GitHub Pages
+
+# 部署结构：
+#   /guichu/          → public/index.html  （宣传落地页）
+#   /guichu/app/      → Expo Web App 首页
+#   /guichu/app/...   → 所有 App 路由（添加长辈、对话、族谱、设置 …）
 
 on:
   push:
@@ -14,6 +19,7 @@ on:
       - 'tsconfig.json'
       - 'babel.config.js'
       - 'metro.config.js'
+      - '.npmrc'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -42,21 +48,21 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Export Expo web
-        run: npx expo export --platform web --output-dir dist
-
-      # Pages 落地页作为 /welcome 备份入口（保留之前做的那张宣传页）
-      - name: Copy landing page to /welcome
+      # 1) 先准备 dist 根 = 宣传落地页
+      - name: Stage landing page at dist/
         run: |
-          if [ -f public/index.html ]; then
-            mkdir -p dist/welcome
-            cp public/index.html dist/welcome/index.html
-          fi
+          mkdir -p dist
+          cp -R public/. dist/
 
-      # Pages 静态托管没有 SPA fallback，复制 index.html 为 404.html，
-      # 子路径直接访问/刷新时也能被 expo-router 客户端接管
-      - name: SPA 404 fallback
-        run: cp dist/index.html dist/404.html
+      # 2) 再把 Expo Web App 导出到 dist/app/（baseUrl=/guichu/app 由 app.json 决定）
+      - name: Export Expo web to dist/app/
+        run: npx expo export --platform web --output-dir dist/app
+
+      # Pages 对 SPA 深链接没有天然 fallback：
+      # App 里的动态路由（如 /app/ancestors/[id]/chat）刷新时，服务器找不到静态文件会落到 404.html
+      # 把 App 首页复制为 404.html，让 expo-router 客户端接管。
+      - name: SPA 404 fallback for /app/*
+        run: cp dist/app/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
