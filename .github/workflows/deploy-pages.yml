@@ -1,10 +1,19 @@
-name: Deploy Landing Page to GitHub Pages
+name: Deploy Web App to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
+      - 'app/**'
+      - 'src/**'
+      - 'assets/**'
       - 'public/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'babel.config.js'
+      - 'metro.config.js'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -18,14 +27,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Export Expo web
+        run: npx expo export --platform web --output-dir dist
+
+      # Pages 落地页作为 /welcome 备份入口（保留之前做的那张宣传页）
+      - name: Copy landing page to /welcome
+        run: |
+          if [ -f public/index.html ]; then
+            mkdir -p dist/welcome
+            cp public/index.html dist/welcome/index.html
+          fi
+
+      # Pages 静态托管没有 SPA fallback，复制 index.html 为 404.html，
+      # 子路径直接访问/刷新时也能被 expo-router 客户端接管
+      - name: SPA 404 fallback
+        run: cp dist/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -33,8 +64,15 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./dist
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
