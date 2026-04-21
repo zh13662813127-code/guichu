@@ -1,7 +1,7 @@
 /**
  * 长辈状态管理 — Zustand Store
  * 管理长辈列表的加载、新增、删除
- * Web 端降级为内存模式（无 SQLite）
+ * Native 端持久化到 SQLite；Web 端持久化到 localStorage（避免刷新丢数据）
  */
 
 import { create } from 'zustand';
@@ -9,6 +9,36 @@ import { Platform } from 'react-native';
 
 // Web 端不导入 SQLite 相关模块，避免 wasm 报错
 const isNative = Platform.OS !== 'web';
+
+// Web 端 localStorage key；版本号用于未来迁移
+const WEB_STORAGE_KEY = 'guichu_ancestors_v1';
+
+/** Web 端：把当前长辈列表写入 localStorage（私密数据，仅本机存储） */
+function saveWebAncestors(ancestors: Ancestor[]) {
+  if (isNative) return;
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(ancestors));
+  } catch (e) {
+    // 超出配额或隐私模式下可能抛异常，不阻断流程
+    console.warn('Web 端长辈数据持久化失败:', e);
+  }
+}
+
+/** Web 端：从 localStorage 读取长辈列表 */
+function loadWebAncestors(): Ancestor[] {
+  if (isNative) return [];
+  try {
+    if (typeof localStorage === 'undefined') return [];
+    const raw = localStorage.getItem(WEB_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Ancestor[]) : [];
+  } catch (e) {
+    console.warn('Web 端长辈数据读取失败:', e);
+    return [];
+  }
+}
 
 interface Ancestor {
   id: string;
@@ -49,6 +79,12 @@ interface AncestorStore {
   removeAncestor: (id: string) => Promise<void>;
   /** 更新长辈的 .skill 人格档案内容 */
   updateAncestorSkill: (id: string, skillContent: string) => Promise<void>;
+  /** 更新长辈的克隆音色（训练成功后回填） */
+  updateAncestorVoice: (
+    id: string,
+    voiceEngine: string,
+    voiceId: string,
+  ) => Promise<void>;
   /** 更新长辈基本资料 */
   updateAncestorInfo: (id: string, data: {
     name?: string;
@@ -74,8 +110,8 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
         const ancestors = await getAllAncestors();
         set({ ancestors: ancestors as Ancestor[], isLoading: false });
       } else {
-        // Web 端：用内存数据
-        set({ isLoading: false });
+        // Web 端：从 localStorage 恢复
+        set({ ancestors: loadWebAncestors(), isLoading: false });
       }
     } catch (e) {
       console.error('加载长辈列表失败:', e);
@@ -121,7 +157,9 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
         created_at: now,
         updated_at: now,
       };
-      set({ ancestors: [...get().ancestors, newAncestor] });
+      const next = [...get().ancestors, newAncestor];
+      set({ ancestors: next });
+      saveWebAncestors(next);
       return id;
     }
   },
@@ -132,7 +170,9 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
       await deleteAncestor(id);
       await get().loadAncestors();
     } else {
-      set({ ancestors: get().ancestors.filter(a => a.id !== id) });
+      const next = get().ancestors.filter(a => a.id !== id);
+      set({ ancestors: next });
+      saveWebAncestors(next);
     }
   },
 
@@ -142,14 +182,34 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
       await updateAncestor(id, { skill_content: skillContent });
       await get().loadAncestors();
     } else {
-      // Web 端：直接更新内存
-      set({
-        ancestors: get().ancestors.map((a) =>
-          a.id === id
-            ? { ...a, skill_content: skillContent, updated_at: new Date().toISOString() }
-            : a
-        ),
+      // Web 端：直接更新内存 + localStorage
+      const next = get().ancestors.map((a) =>
+        a.id === id
+          ? { ...a, skill_content: skillContent, updated_at: new Date().toISOString() }
+          : a
+      );
+      set({ ancestors: next });
+      saveWebAncestors(next);
+    }
+  },
+
+  updateAncestorVoice: async (id, voiceEngine, voiceId) => {
+    const now = new Date().toISOString();
+    if (isNative) {
+      const { updateAncestor } = await import('../db/queries/ancestors');
+      await updateAncestor(id, {
+        voice_id: voiceId,
+        voice_engine: voiceEngine,
       });
+      await get().loadAncestors();
+    } else {
+      const next = get().ancestors.map((a) =>
+        a.id === id
+          ? { ...a, voice_id: voiceId, voice_engine: voiceEngine, updated_at: now }
+          : a,
+      );
+      set({ ancestors: next });
+      saveWebAncestors(next);
     }
   },
 
@@ -176,25 +236,25 @@ export const useAncestorStore = create<AncestorStore>((set, get) => ({
       }
       await get().loadAncestors();
     } else {
-      // Web 端：直接更新内存
-      set({
-        ancestors: get().ancestors.map((a) =>
-          a.id === id
-            ? {
-                ...a,
-                ...(data.name !== undefined && { name: data.name }),
-                ...(data.relationship !== undefined && { relationship: data.relationship }),
-                ...(data.gender !== undefined && { gender: data.gender as 'male' | 'female' | 'other' }),
-                ...(data.birthYear !== undefined && { birth_year: data.birthYear }),
-                ...(data.deathYear !== undefined && { death_year: data.deathYear }),
-                ...(data.deathDate !== undefined && { death_date: data.deathDate }),
-                ...(data.honor !== undefined && { honor: data.honor }),
-                ...(data.avatarPath !== undefined && { avatar_path: data.avatarPath }),
-                updated_at: now,
-              }
-            : a
-        ),
-      });
+      // Web 端：直接更新内存 + localStorage
+      const next = get().ancestors.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              ...(data.name !== undefined && { name: data.name }),
+              ...(data.relationship !== undefined && { relationship: data.relationship }),
+              ...(data.gender !== undefined && { gender: data.gender as 'male' | 'female' | 'other' }),
+              ...(data.birthYear !== undefined && { birth_year: data.birthYear }),
+              ...(data.deathYear !== undefined && { death_year: data.deathYear }),
+              ...(data.deathDate !== undefined && { death_date: data.deathDate }),
+              ...(data.honor !== undefined && { honor: data.honor }),
+              ...(data.avatarPath !== undefined && { avatar_path: data.avatarPath }),
+              updated_at: now,
+            }
+          : a
+      );
+      set({ ancestors: next });
+      saveWebAncestors(next);
     }
   },
 }));

@@ -352,9 +352,9 @@ export default function AncestorDetailScreen() {
               description={
                 hasVoice ? '已训练声音模型' : Descriptions.cardVoice
               }
-              actionLabel="训练声音"
+              actionLabel={hasVoice ? '重新训练' : '训练声音'}
               onAction={() => {
-                Alert.alert('功能开发中', '声音训练功能即将上线');
+                router.push(`/ancestors/${ancestor.id}/voice-train`);
               }}
               status={hasVoice ? 'done' : 'pending'}
               accentColor={Colors.crimson}
