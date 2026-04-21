@@ -51,8 +51,11 @@ export default function SettingsScreen() {
   const handleImport = async () => {
     setExportModal(false);
     try {
-      const count = await importAncestorsData(addAncestor);
-      setImportResultModal({ visible: true, message: `成功导入 ${count} 条长辈记录` });
+      const res = await importAncestorsData(addAncestor, ancestors);
+      const parts = [`导入 ${res.imported} 条`];
+      if (res.skippedDuplicates > 0) parts.push(`跳过重复 ${res.skippedDuplicates} 条`);
+      if (res.failed > 0) parts.push(`失败 ${res.failed} 条`);
+      setImportResultModal({ visible: true, message: parts.join('，') + `（共 ${res.total} 条）` });
     } catch (e: any) {
       // 用户取消选择不提示错误
       if (e?.message === '已取消选择') return;
@@ -64,7 +67,11 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     setExportModal(false);
     try {
-      await exportAncestorsData(ancestors);
+      const res = await exportAncestorsData(ancestors);
+      setImportResultModal({
+        visible: true,
+        message: `已导出 ${res.ancestorCount} 位长辈的数据`,
+      });
     } catch (e: any) {
       setWipModal({ visible: true, feature: `导出失败：${e?.message || '未知错误'}` });
     }
@@ -101,10 +108,17 @@ export default function SettingsScreen() {
     },
     {
       icon: '🔔',
-      label: '习俗提醒',
-      hint: '节气、忌日等自动提醒',
+      label: '习俗提醒（系统日历）',
+      hint: '节气、忌日同步到系统日历',
       status: 'ready',
       onPress: () => router.push('/settings/calendar' as any),
+    },
+    {
+      icon: '⏰',
+      label: '本地通知',
+      hint: '无需日历，直接在本机调度到日提醒',
+      status: 'ready',
+      onPress: () => router.push('/settings/notifications' as any),
     },
     {
       icon: '📦',
@@ -242,7 +256,7 @@ export default function SettingsScreen() {
       <Modal visible={aboutVisible} transparent animationType="fade" onRequestClose={() => setAboutVisible(false)}>
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
-            <Text style={s.aboutName}>归处 Guichu</Text>
+            <Text style={s.aboutName}>归处 Homecoming</Text>
             <Text style={s.aboutVer}>v0.1.0</Text>
             <Text style={s.aboutDesc}>开源电子族谱</Text>
             <Text style={s.aboutQuote}>"血脉所系，根脉所归"</Text>
